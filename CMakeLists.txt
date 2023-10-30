@@ -1,0 +1,7 @@
+if (NOT PICO_NO_HARDWARE)
+    add_subdirectory(irline)
+    add_subdirectory(magnometer)
+    add_subdirectory(ultrasonic)
+    add_subdirectory(wifi)
+    add_subdirectory(motor)
+endif ()
