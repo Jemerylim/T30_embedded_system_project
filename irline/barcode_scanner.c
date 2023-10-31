@@ -179,6 +179,13 @@ int main() {
     int index = 0;
     while (1) {
         uint32_t result = adc_read(); //result is a range between 0 - ~2000, above 850 is black
+        // adc_select_input(1); // ADC1 GP27
+        // uint32_t result_left = adc_read(); // voltage above 1 should be black
+        // const float conversion_factor = 3.3f / (1 << 12);
+        // printf("\n0x%03x -> %f V\n", result_left, result_left * conversion_factor);
+        // adc_select_input(2); // ADC2 GP28
+        // uint32_t result_right = adc_read();
+        // printf("\n0x%03x -> %f V\n", result_right, result_right * conversion_factor);
         index = handleBars(result,index);
         for (int i = 0; i < 10; i++) {
             printf("Bar %d - Voltage: %d, Color: %s, Start: %llu, len:  %llu\n" , i + 1, barList[i].voltage, barList[i].color == 1 ? "Black" : "White", barList[i].bar_start, barList[i].barLength);
