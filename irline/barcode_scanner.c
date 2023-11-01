@@ -199,7 +199,7 @@ int main() {
                     index =0;
                     printf("%c",decodedBarcode[barcodeIndex]);
                     barcodeIndex+=1;
-                    sleep_ms(3000);
+                    //sleep_ms(3000);
                 }else{
                     printf("done");
                     readBarcode();
