@@ -205,7 +205,7 @@ int main() {
                     readBarcode();
                     index =0;
                     barcodeIndex=0;
-                    sleep_ms(3000);
+                    //sleep_ms(3000);
                 }
             }
         }
