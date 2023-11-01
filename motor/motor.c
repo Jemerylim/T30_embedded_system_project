@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+// Output PWM signals on pins 0 and 1
+
+
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/adc.h"
@@ -19,10 +28,65 @@ int right_steps = 0;
 int left_steps = 0;
 uint32_t left_last_rev_time = 0;
 uint32_t right_last_rev_time = 0;
+float left_total_distance = 0;
+float right_total_distance = 0;
+
+// For speed control
+void set_motor_speed(uint slice_num, float duty_cycle)
+{
+    pwm_set_chan_level(slice_num, PWM_CHAN_A, duty_cycle * 62500); 
+    pwm_set_chan_level(slice_num, PWM_CHAN_B, duty_cycle * 62500 );
+}
+
+// Functions to control the movement of the robot
+void move_forward()
+{
+    printf("Forward!\n");
+    gpio_put(MOTOR_LEFT_FORWARD, 1);
+    gpio_put(MOTOR_LEFT_BACKWARD, 0);
+    gpio_put(MOTOR_RIGHT_FORWARD, 1);
+    gpio_put(MOTOR_RIGHT_BACKWARD, 0);
+    
+}
+
+void move_backward()
+{
+    printf("Backwards!\n");
+    gpio_put(MOTOR_LEFT_FORWARD, 0);
+    gpio_put(MOTOR_LEFT_BACKWARD, 1);
+    gpio_put(MOTOR_RIGHT_FORWARD, 0);
+    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
+}
+
+void right_turn(){
+    printf("left turn!\n");
+    gpio_put(MOTOR_LEFT_FORWARD, 1);
+    gpio_put(MOTOR_LEFT_BACKWARD, 0);
+    gpio_put(MOTOR_RIGHT_FORWARD, 0);
+    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
+
+}
+void left_turn(){
+    printf("right turn!\n");
+    gpio_put(MOTOR_LEFT_FORWARD, 0);
+    gpio_put(MOTOR_LEFT_BACKWARD, 1);
+    gpio_put(MOTOR_RIGHT_FORWARD, 1);
+    gpio_put(MOTOR_RIGHT_BACKWARD,0 );
+
+}
+void stop_movement()
+{
+    printf("Stop!\n");
+    gpio_put(MOTOR_LEFT_FORWARD, 0);
+    gpio_put(MOTOR_LEFT_BACKWARD, 0);
+    gpio_put(MOTOR_RIGHT_BACKWARD,0 );
+    gpio_put(MOTOR_RIGHT_FORWARD, 0);
+}
 
 // Interrupt handler for wheel encoders
 void sensor_handler(uint gpio, uint32_t events)
 {
+
     if(gpio ==LEFT_WHEEL_ENCODER)
     {
         left_steps++;
@@ -34,8 +98,10 @@ void sensor_handler(uint gpio, uint32_t events)
             float time_diff = (current_time - left_last_rev_time) / 1000000.0; // Convert to seconds
             float rps = 1.0 / time_diff;
             float speed = (2 * 3.14159265359 * WHEEL_DIAMETER) * rps;
+            left_total_distance += speed * time_diff;
             printf("Left wheel RPS: %.2f\n", rps);
             printf("Left wheel speed (m/s): %.2f\n", speed);
+            printf("Left wheel total distance (m): %.2f\n", left_total_distance);
             left_last_rev_time = current_time;
         }
     }
@@ -52,54 +118,15 @@ void sensor_handler(uint gpio, uint32_t events)
             float time_diff = (current_time - right_last_rev_time) / 1000000.0; // Convert to seconds
             float rps = 1.0 / time_diff;
             float speed = (2 * 3.14159265359 * WHEEL_DIAMETER) * rps;
+            right_total_distance += speed * time_diff;
             printf("Right wheel RPS: %.2f\n", rps);
             printf("Right wheel speed (m/s): %.2f\n", speed);
+            printf("Right wheel total distance (m): %.2f\n", right_total_distance);
             right_last_rev_time = current_time;
         }
     }
 }
-// Functions to control the movement of the robot
-void move_forward()
-{
-    gpio_put(MOTOR_LEFT_FORWARD, 1);
-    gpio_put(MOTOR_LEFT_BACKWARD, 0);
-    gpio_put(MOTOR_RIGHT_BACKWARD, 0);
-    gpio_put(MOTOR_RIGHT_FORWARD, 1);
-}
 
-void move_backward()
-{
-    printf("Backwards!\n");
-    gpio_put(MOTOR_LEFT_FORWARD, 0);
-    gpio_put(MOTOR_LEFT_BACKWARD, 1);
-    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
-    gpio_put(MOTOR_RIGHT_FORWARD, 0);
-}
-
-void left_turn(){
-    printf("left turn!\n");
-    gpio_put(MOTOR_LEFT_FORWARD, 0);
-    gpio_put(MOTOR_LEFT_BACKWARD, 0);
-    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
-    gpio_put(MOTOR_RIGHT_FORWARD, 0);
-
-}
-void right_turn(){
-    printf("right turn!\n");
-    gpio_put(MOTOR_LEFT_FORWARD, 0);
-    gpio_put(MOTOR_LEFT_BACKWARD, 1);
-    gpio_put(MOTOR_RIGHT_BACKWARD,0 );
-    gpio_put(MOTOR_RIGHT_FORWARD, 0);
-
-}
-void stop_movement()
-{
-    printf("Stop!\n");
-    gpio_put(MOTOR_LEFT_FORWARD, 0);
-    gpio_put(MOTOR_LEFT_BACKWARD, 0);
-    gpio_put(MOTOR_RIGHT_BACKWARD,0 );
-    gpio_put(MOTOR_RIGHT_FORWARD, 0);
-}
 int main()
 {
 
@@ -130,8 +157,6 @@ int main()
     uint slice_num = pwm_gpio_to_slice_num(0);
     pwm_set_clkdiv(slice_num, 100); // Set the clock divider for the PWM slice.
     pwm_set_wrap(slice_num, 62500); // Set the wrap value, which determines the period of the PWM signal (in this case, 62500 cycles).
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, 0.5 * 62500); 
-    pwm_set_chan_level(slice_num, PWM_CHAN_B, 0.5 * 62500 );
     pwm_set_enabled(slice_num, true);
 
     // Enable interrupts on wheel encoder GPIO pins
@@ -141,23 +166,13 @@ int main()
 
 
     while (1)
-    {   
-        // Control the robot's movement
+    {  
+        set_motor_speed(slice_num,0.3);
         move_forward();
-
         sleep_ms(5000);
-
-        move_backward();
-
+        set_motor_speed(slice_num,0.8);
+        move_forward();
         sleep_ms(5000);
-
-        left_turn();
-        
-        sleep_ms(5000);
-
-        right_turn();
-
-        sleep_ms(5000);    
     }
 }
 
