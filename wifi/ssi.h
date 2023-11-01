@@ -3,7 +3,7 @@
 #include "hardware/adc.h"
 
 // SSI tags - tag length limited to 8 bytes by default
-const char * ssi_tags[] = {"volt","temp","led"};
+const char * ssi_tags[] = {"volt","temp","led", "motor"};
 
 u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
   size_t printed;
@@ -29,6 +29,20 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
       }
       else{
         printed = snprintf(pcInsert, iInsertLen, "OFF");
+      }
+    }
+    break;
+  case 3: //motor
+    {
+      bool motor_left_forward = cyw43_arch_gpio_get(2);
+      bool motor_left_backward = cyw43_arch_gpio_get(3);
+      bool motor_right_backward = cyw43_arch_gpio_get(4);
+      bool motor_right_forward = cyw43_arch_gpio_get(5);
+      if(motor_left_backward == true && motor_left_forward == true && motor_right_forward == true && motor_right_backward == true){
+        printed = snprintf(pcInsert, iInsertLen, "Running");
+      }
+      else{
+        printed = snprintf(pcInsert, iInsertLen, "Stopped");
       }
     }
     break;

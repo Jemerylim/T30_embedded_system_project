@@ -1,31 +1,49 @@
 <!DOCTYPE html>
 <html>
     <head> 
-        <title>PicoW Webserver</title> 
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <title>Team 30 Web Server</title> 
     </head>
-    <body> <h1>PicoW Webserver Tutorial</h1>
-        <br>
-        <h2>This bit is SSI:</h2>
-        <p>Voltage: <!--#volt--></p>
-        <p>Temp: <!--#temp--> C</p>
-        <p>LED is: <!--#led--></p>
-        <br>
-        <h1>WTF IS THIS?</h1>
-        <h1>WTF IS THIS EDITABLE???</h1>
-        <h2>This bit is CGI:</h2>
-        <h1>WTF IS THIS?</h1>
-        <h1>WTF IS THIS EDITABLE???</h1>
-        <h2>This bit is CGI:</h2>
-        <h1>WTF IS THIS?</h1>
-        <h1>WTF IS THIS EDITABLE???</h1>
-        <h2>This bit is CGI:</h2>
-        <h1>WTF IS THIS?</h1>
-        <h1>WTF IS THIS EDITABLE???</h1>
-        <h2>This bit is CGI:</h2>
-        <a href="/led.cgi?led=1"><button>LED ON</button></a>
-        <a href="/led.cgi?led=0"><button>LED OFF</button></a>
-        <br>
-        <br>
-        <a href="/index.shtml">Refresh</a>
+    <body class="container">
+        <div class="d-flex justify-content-center row">
+            <h1>Team 30 Web Server Control</h1>
+        </div>
+        <div class="container">
+            <div class="row justify-content-center">
+                <h2>This bit is SSI:</h2>
+            </div>
+            <div class="row justify-content-center">
+                <p>Voltage: <!--#volt--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Temp: <!--#temp--> C</p>
+            </div>
+            <div class="row justify-content-center">
+                <p>LED is: <!--#led--></p>
+            </div>   
+            <div class="row justify-content-center">
+                <p>Motor is: <!--#motor--></p>
+            </div>             
+        </div>
+        <div class="container">
+            <div class="row justify-content-center">
+                <h2>This bit is CGI:</h2>
+            </div>
+            <div class="row justify-content-center">
+                <a href="/led.cgi?led=1"><button>LED ON</button></a>
+            </div>
+            <div class="row justify-content-center">
+                <a href="/led.cgi?led=0"><button>LED OFF</button></a>
+            </div>  
+            <div class="row justify-content-center">
+                <a href="/motor.cgi?motor=1"><button>motor on</button></a>
+            </div>
+            <div class="row justify-content-center">
+                <a href="/motor.cgi?motor=0"><button>motor OFF</button></a>
+            </div>                                                  
+            <div class="row justify-content-center">
+                <a href="/index.shtml">Refresh</a>     
+            </div>            
+        </div>   
    </body>
 </html>

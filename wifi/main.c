@@ -9,8 +9,12 @@
 #include "task.h"
 #include "lwip/ip_addr.h"
 
-#include "semphr.h" // Include the semaphore header
+// Include the semaphore header
+#include "semphr.h" 
 
+//Include drivers
+#include "motor.c"
+#include "globalVariables.h"
 
 #ifndef RUN_FREERTOS_ON_CORE
 #define RUN_FREERTOS_ON_CORE 0
@@ -22,8 +26,16 @@
 
 #define WIFI_PASSWORD "testing123"
 
-//Define sempahore
+//Motor movements
+
+
+//Define sempahore for starting wifi task before initialising HTTPD
 SemaphoreHandle_t wifiConnectedSemaphore;
+
+/*****MOTOR VARIABLES*******/
+//Define a semaphore for interrupting the motor.
+SemaphoreHandle_t motor_state_semaphore;
+bool returnToMotorLoop = pdFALSE;
 
 //initialise wifi
 void init_wifi(__unused void *params) {
@@ -43,48 +55,28 @@ void init_wifi(__unused void *params) {
     } else {
         printf("Connected.\n");
     }
+
     //Signal that Wi-Fi is ready
     xSemaphoreGive(wifiConnectedSemaphore);
     while(true) {
-        printf("TESTING WIFI%d\n",IP_ADDR_ANY);        
+        printf("TESTING WIFI%s\n",IP_ADDR_ANY);        
         ip4_addr_t ip4_address;
         IP4_ADDR(&ip4_address, 192, 168, 1, 100); // Example IPv4 address: 192.168.1.100
         char ip_str[IP4ADDR_STRLEN_MAX];
         ip4addr_ntoa(&ip4_address);
         printf("IP address: %s\n", ip_str);
 
-
-
-
-        // not much to do as LED is in another task, and we're using RAW (callback) lwIP API
+        // not much to do, and we're using RAW (callback) lwIP API
         vTaskDelay(1000);
     }
 
     // cyw43_arch_deinit();    
 }
 
-void handle_http_request(__unused void *params){
-    // Initialise web server
-    httpd_init();
-    printf("Http server initialised\n");
-
-
-    // Configure SSI and CGI handler
-    ssi_init(); 
-    printf("SSI Handler initialised\n");
-    cgi_init();
-    printf("CGI Handler initialised\n");
-    printf("Test");
-    while(true){
-        printf("I am running http");
-        vTaskDelay(100);
-
-    }    
-}
 void vApplicationMinimalIdleHook( void )
 {
 }
-void core1_entry() {
+void init_http_server() {
     //Wait for Wi-Fi to be ready
     if (xSemaphoreTake(wifiConnectedSemaphore, portMAX_DELAY) == pdTRUE) {
     printf("Core1 entry:\n");    
@@ -107,37 +99,94 @@ void core1_entry() {
     }   
     vTaskDelete(NULL);
 }
-void vLaunch( void) {    
 
-    //Task to initialise wifi module
-    TaskHandle_t wifi_task;
-    // xTaskCreatePinnedToCore(init_wifi, "MainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &wifi_task,0);            
-    // xTaskCreatePinnedToCore(init_wifi, "Task1", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &wifi_task, 0); // Assign to core 0    
-                                    
-    // xTaskCreateAffinitySet(init_wifi, "wifiTask", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, 0,&wifi_task);
-    // TaskHandle_t core_entry;
-    // xTaskCreateAffinitySet(core1_entry, "wifiTask", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, 1,&core_entry);
+void motor_control(){
 
-    TaskHandle_t xHandle;    
+     // initialise a binary sempaphore for motor control
+    motor_state_semaphore = xSemaphoreCreateBinary();
 
-        /* Create a task, storing the handle. */
-        xTaskCreate( init_wifi, "NAME", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &( xHandle ) );        
+    // Initialize GPIO pins for motor control and wheel encoders
+    gpio_init(MOTOR_LEFT_FORWARD);
+    gpio_init(MOTOR_LEFT_BACKWARD);
+    gpio_init(MOTOR_RIGHT_BACKWARD);
+    gpio_init(MOTOR_RIGHT_FORWARD);
+    gpio_init(LEFT_WHEEL_ENCODER);
+    gpio_init(RIGHT_WHEEL_ENCODER);
+    
+    // Tell GPIO 0 and 1 they are allocated to the PWM
+    gpio_set_function(0, GPIO_FUNC_PWM);
+    gpio_set_function(1, GPIO_FUNC_PWM);
+
+    // Set GPIO directions
+    gpio_set_dir(MOTOR_LEFT_FORWARD, GPIO_OUT);
+    gpio_set_dir(MOTOR_LEFT_BACKWARD, GPIO_OUT);
+    gpio_set_dir(MOTOR_RIGHT_BACKWARD, GPIO_OUT);
+    gpio_set_dir(MOTOR_RIGHT_FORWARD, GPIO_OUT);
+    gpio_set_dir(LEFT_WHEEL_ENCODER,GPIO_IN);
+    gpio_set_dir(RIGHT_WHEEL_ENCODER,GPIO_IN);
+
+    // Configure PWM for motor control
+    uint slice_num = pwm_gpio_to_slice_num(0);
+    pwm_set_clkdiv(slice_num, 100); // Set the clock divider for the PWM slice.
+    pwm_set_wrap(slice_num, 62500); // Set the wrap value, which determines the period of the PWM signal (in this case, 62500 cycles).
+    pwm_set_enabled(slice_num, true);
+
+    // Enable interrupts on wheel encoder GPIO pins
+    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &sensor_handler);
+    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &sensor_handler);
+    
+
+
+    while (1)
+    {  
+        printf("I am inside mtoor while loop\n");
+        if(motor_activated){
+            printf("I am inside motor activated\n");
+            set_motor_speed(slice_num,0.3);
+            move_forward();
+
+            // See if we can obtain the semaphore.  If the semaphore is not available
+            // wait 1scond to see if it becomes free.
+            if(xSemaphoreTake(motor_state_semaphore, pdMS_TO_TICKS(1000)) == pdTRUE){            
+                // If the semaphore was taken, check if we should return to the loop
+                if (returnToMotorLoop == pdTRUE) {
+                    returnToMotorLoop = pdFALSE; // Reset the flag
+                } else {
+                    // If not, break out of the loop
+                    break;
+                }
+            }
+        }
+        else {
+            printf("I am inside false loop\n");
+            set_motor_speed(slice_num,0);            
+        }
         
-    TaskHandle_t xHandle1;    
+    }
+}
+void vLaunch( void) {        
+    TaskHandle_t wifi_task_handle;    
+    /* Create a task, storing the handle. */
+    xTaskCreate( init_wifi, "wifiThread", configMINIMAL_STACK_SIZE, NULL, 2, &( wifi_task_handle ) );        
+        
+    TaskHandle_t http_task_handle;    
+    /* Create a task, storing the handle. */
+    xTaskCreate( init_http_server, "httpThread", configMINIMAL_STACK_SIZE, NULL, 1, &( http_task_handle ) );
 
-        /* Create a task, storing the handle. */
-        xTaskCreate( core1_entry, "NAME1", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &( xHandle1 ) );
+    TaskHandle_t motor_task_handle;    
+    /* Create a task, storing the handle. */
+    xTaskCreate( motor_control, "motorThread", configMINIMAL_STACK_SIZE, NULL, 3, &( motor_task_handle ) );
 
-       // Assign task `init_wifi` to core 0
-       TaskHandle_t init_wifi;
-        vTaskCoreAffinitySet(init_wifi, 1 << 1);
+    // Assign task `init_wifi` to core 0    
+    vTaskCoreAffinitySet(wifi_task_handle, 1 << 0);
 
-        // Assign task `core1_entry` to core 1
-        TaskHandle_t core1_entry;
-        vTaskCoreAffinitySet(core1_entry, 1 << 0);
-    // //Task to handle http requests
-    // TaskHandle_t http_task;
-    // xTaskCreate(handle_http_request, "httpThread", 2048, NULL, 2, &http_task);
+    // Assign task `core1_entry` to core 0    
+    vTaskCoreAffinitySet(http_task_handle, 1 << 0);
+
+    // Run the motor control on core 1
+    vTaskCoreAffinitySet(motor_task_handle, 1 << 1);
+   
+    // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    
     
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)
@@ -155,33 +204,8 @@ void vLaunch( void) {
 
 int main() {
     stdio_init_all();            
-
-    // Create the semaphore
-    wifiConnectedSemaphore = xSemaphoreCreateBinary();
-
-    
-    // cyw43_arch_init();
-
-    // cyw43_arch_enable_sta_mode();
-
-    // // Connect to the WiFI network - loop until connected
-    // while(cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000) != 0){
-    //     printf("Attempting to connect...\n");
-    // }
-    // // Print a success message once connected
-    // printf("Connected! \n");
-    
-    // // Initialise web server
-    // httpd_init();
-    // printf("Http server initialised\n");
-
-
-    // // Configure SSI and CGI handler
-    // ssi_init(); 
-    // printf("SSI Handler initialised\n");
-    // cgi_init();
-    // printf("CGI Handler initialised\n");
-    // printf("Test");    
+    // Create the semaphore for wifi to start first
+    wifiConnectedSemaphore = xSemaphoreCreateBinary();        
 
     /* Configure the hardware ready to run the demo. */
     const char *rtos_name;

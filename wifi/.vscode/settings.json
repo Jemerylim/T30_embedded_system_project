@@ -30,6 +30,7 @@
         "async_context_threadsafe_background.h": "c",
         "cgi.h": "c",
         "ssi.h": "c",
-        "cyw43_arch.h": "c"
+        "cyw43_arch.h": "c",
+        "semphr.h": "c"
     }
 }
