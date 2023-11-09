@@ -47,6 +47,7 @@ target_link_libraries(${PROGRAM_NAME}
     pico_cyw43_arch_lwip_sys_freertos
     FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
     hardware_pwm # for motor.c
+    hardware_i2c # for mag.h
 )
 
 pico_enable_stdio_usb(${PROGRAM_NAME} TRUE)

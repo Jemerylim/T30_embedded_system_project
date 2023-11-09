@@ -73,6 +73,7 @@ void init_wifi(__unused void *params) {
     // cyw43_arch_deinit();    
 }
 
+// to prevent error
 void vApplicationMinimalIdleHook( void )
 {
 }
@@ -103,9 +104,9 @@ void init_http_server() {
 
 void motor_control(){
 
-     // initialise a binary sempaphore for motor control
-    motor_state_semaphore = xSemaphoreCreateBinary();
-
+    // Initialize the standard I/O for printf
+    stdio_init_all();
+    
     // Initialize GPIO pins for motor control and wheel encoders
     gpio_init(MOTOR_LEFT_FORWARD);
     gpio_init(MOTOR_LEFT_BACKWARD);
@@ -126,69 +127,36 @@ void motor_control(){
     gpio_set_dir(LEFT_WHEEL_ENCODER,GPIO_IN);
     gpio_set_dir(RIGHT_WHEEL_ENCODER,GPIO_IN);
 
-    // Configure PWM for motor control
-    uint slice_num = pwm_gpio_to_slice_num(0);
-    pwm_set_clkdiv(slice_num, 100); // Set the clock divider for the PWM slice.
-    pwm_set_wrap(slice_num, 62500); // Set the wrap value, which determines the period of the PWM signal (in this case, 62500 cycles).
-    pwm_set_enabled(slice_num, true);
+    
 
     // Enable interrupts on wheel encoder GPIO pins
-    // gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &sensor_handler);
-    // gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &sensor_handler);
+    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+
+    gpio_set_irq_enabled_with_callback(21, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
+    gpio_set_irq_enabled_with_callback(20, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
     
-    int receivedBufferValue;
-    size_t bytesRead;
+    
 
     while (1)
-    {          
-        // if(1){
-        //     set_motor_speed(slice_num, 0);
-        //     printf("motor stopped\n");
-        // }
-        // else {
-        //     set_motor_speed(slice_num,0.3);
-        //     move_forward();
-        //     printf("motor running\n");
-        // }
-        
-        bytesRead = xMessageBufferReceive(xMotorStateHandler, &receivedBufferValue, sizeof(int), portMAX_DELAY);
-        printf("I am inside motor while loop. received Buffer Value:%d\n", receivedBufferValue);
-        printf("I am running on core:%ld\n", sio_hw->cpuid);
-        if(bytesRead == sizeof(int)){
-            if(receivedBufferValue == 1){
-                printf("I am inside start condition\n");
-                set_motor_speed(slice_num,0.3);
-                move_forward();
-            } else if(receivedBufferValue ==0){
-                printf("I am inside stop condition\n");
-                set_motor_speed(slice_num, 0);
-                stop_movement();
-            }
-            else {
-                continue;
-            }
+    {  
+        set_motor_speed(0.3);
+        if (left_black == true && right_black == true)
+        {
+            move_forward();
         }
-        // if(motor_activated){
-        //     printf("I am inside motor activated\n");
-        //     set_motor_speed(slice_num,0.3);
-        //     move_forward();
-
-        //     // See if we can obtain the semaphore.  If the semaphore is not available
-        //     // wait 1scond to see if it becomes free.
-        //     if(xSemaphoreTake(motor_state_semaphore, pdMS_TO_TICKS(1000)) == pdTRUE){            
-        //         // If the semaphore was taken, check if we should return to the loop
-        //         if (returnToMotorLoop == pdTRUE) {
-        //             returnToMotorLoop = pdFALSE; // Reset the flag
-        //         } else {
-        //             // If not, break out of the loop
-        //             break;
-        //         }
-        //     }
-        // }
-        // else {
-        //     // printf("I am inside false loop\n");
-        //     set_motor_speed(slice_num,0);            
-        // }
+        else if (left_black == true && right_black == false)
+        {
+            right_turn_with_angle(90);
+        }
+        else if (left_black == false && right_black == true)
+        {
+            left_turn_with_angle(90);
+        }
+        else if (left_black == false && right_black == true)
+        {
+            stop_movement();
+        }
         vTaskDelay(1000);
     }
 }
