@@ -8,8 +8,16 @@
 
 
 extern SemaphoreHandle_t motor_state_semaphore;
-extern bool returnToMotorLoop;
-extern bool motor_activated;
 
+/*******Motor Buffers*****/
 static MessageBufferHandle_t xMotorStateHandler;
 static SemaphoreHandle_t xMotorStateHandlerMutex;
+
+/*******IR Line Buffers*****/
+static MessageBufferHandle_t xIRStateHandler;
+
+/*******Magnometer Line Buffers*****/
+
+/*******Ultrasonic Line Buffers*****/
+
+

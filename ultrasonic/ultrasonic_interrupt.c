@@ -32,8 +32,9 @@ z
 
 static MessageBufferHandle_t xControlMessageBufferUltra;
 
-const uint TRIG_PIN = 0;
-const uint ECHO_PIN = 1;
+//Adjusted to fit the actual implementation
+const uint TRIG_PIN = 10;
+const uint ECHO_PIN = 11;
 int timeout = 26100;
 volatile uint64_t start_time_us = 0;
 volatile uint64_t end_time_us = 0;

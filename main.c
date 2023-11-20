@@ -2,8 +2,8 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "lwipopts.h"
-#include "ssi.h"
-#include "cgi.h"
+#include "wifi/ssi.h"
+#include "wifi/cgi.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -13,7 +13,7 @@
 #include "semphr.h" 
 
 //Include drivers
-#include "motor.c"
+#include "motor/motor.c"
 #include "globalVariables.h"
 
 #ifndef RUN_FREERTOS_ON_CORE
@@ -34,7 +34,6 @@ SemaphoreHandle_t wifiConnectedSemaphore;
 /*****MOTOR VARIABLES*******/
 //Define a semaphore for interrupting the motor.
 SemaphoreHandle_t motor_state_semaphore;
-bool returnToMotorLoop = pdFALSE;
 
 //initialise wifi
 void init_wifi(__unused void *params) {
@@ -113,10 +112,12 @@ void motor_control(){
     gpio_init(MOTOR_RIGHT_FORWARD);
     gpio_init(LEFT_WHEEL_ENCODER);
     gpio_init(RIGHT_WHEEL_ENCODER);
+    gpio_init(LEFT_IR_SENSOR);
+    gpio_init(RIGHT_IR_SENSOR);
     
     // Tell GPIO 0 and 1 they are allocated to the PWM
-    gpio_set_function(0, GPIO_FUNC_PWM);
-    gpio_set_function(1, GPIO_FUNC_PWM);
+    gpio_set_function(11, GPIO_FUNC_PWM);
+    gpio_set_function(12, GPIO_FUNC_PWM);
 
     // Set GPIO directions
     gpio_set_dir(MOTOR_LEFT_FORWARD, GPIO_OUT);
@@ -125,15 +126,25 @@ void motor_control(){
     gpio_set_dir(MOTOR_RIGHT_FORWARD, GPIO_OUT);
     gpio_set_dir(LEFT_WHEEL_ENCODER,GPIO_IN);
     gpio_set_dir(RIGHT_WHEEL_ENCODER,GPIO_IN);
+    gpio_set_dir(LEFT_IR_SENSOR,GPIO_IN);
+    gpio_set_dir(RIGHT_IR_SENSOR,GPIO_IN);
 
-    
+    uint slice_num_A = pwm_gpio_to_slice_num(0);
+    uint slice_num_B = pwm_gpio_to_slice_num(1);
+    pwm_set_clkdiv(slice_num_A, 100); 
+    pwm_set_wrap(slice_num_A, 62500); 
+
+    pwm_set_clkdiv(slice_num_B, 100);
+    pwm_set_wrap(slice_num_B, 16075); 
+    pwm_set_chan_level(slice_num_A, PWM_CHAN_A, 16075); 
+    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, 16075);
+    pwm_set_enabled(slice_num_A, true);
+    pwm_set_enabled(slice_num_B, true);
+
 
     // Enable interrupts on wheel encoder GPIO pins
     // gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
     // gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
-
-    // gpio_set_irq_enabled_with_callback(21, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
-    // gpio_set_irq_enabled_with_callback(20, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
     
     int receivedStatus;
     size_t receivedLength;
@@ -149,10 +160,11 @@ void motor_control(){
         //if received data from the webserver/buffer
         if (receivedLength> 0) {
             if(receivedStatus == 1){
-                set_motor_speed(0.5);
+                move_forward();
+                pid_controller(speedLeft, speedRight);
             }            
             else {
-                set_motor_speed(0);
+                stop_movement();                
             }            
         }
         
