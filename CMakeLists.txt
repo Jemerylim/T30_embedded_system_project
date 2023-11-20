@@ -23,6 +23,7 @@ execute_process(COMMAND
 
 add_executable(${PROGRAM_NAME}
     main.c
+    mag.c
 )
 
 target_compile_definitions(${PROGRAM_NAME} PRIVATE
