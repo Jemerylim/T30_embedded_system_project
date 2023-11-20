@@ -1,6 +1,7 @@
 #include "lwip/apps/httpd.h"
 #include "pico/cyw43_arch.h"
 #include "globalVariables.h"
+#include "motor.h"
 
 //motor control variaables
 bool motor_activated = false;
@@ -28,7 +29,7 @@ const char* cgi_motor_handler(int iIndex, int iNumParams, char *pcParam[], char 
         if(strcmp(pcValue[0], "0") == 0){
             int dataToSend = 0;
             // Wait for the semaphore before sending
-            if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) {                
+            // if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) {                
                 // Send the temperature to the buffer for moving average
                 xMessageBufferSend( /* The message buffer to write to. */
                     xMotorStateHandler,
@@ -39,19 +40,20 @@ const char* cgi_motor_handler(int iIndex, int iNumParams, char *pcParam[], char 
                     /* The block time; 0 = no block */
                     0 );
                     printf("Data to send at 0: %d\n", dataToSend);
-                xSemaphoreGive(xMotorStateHandlerMutex);
-            }            
+                // xSemaphoreGive(xMotorStateHandlerMutex);
+            // }            
             // Release the semaphore to turn on the RC            
             motor_activated = false;
-            cyw43_arch_gpio_put(2, 0);// left forward
-            cyw43_arch_gpio_put(3, 0);//left backward
-            cyw43_arch_gpio_put(4, 0); // right backward
-            cyw43_arch_gpio_put(5, 0); // right forward  
+            stop_movement();
+            // cyw43_arch_gpio_put(2, 0);// left forward
+            // cyw43_arch_gpio_put(3, 0);//left backward
+            // cyw43_arch_gpio_put(4, 0); // right backward
+            // cyw43_arch_gpio_put(5, 0); // right forward  
             printf("Stopped\n");
         }                      
         else if(strcmp(pcValue[0], "1") == 0){    
             int dataToSend = 1;
-            if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) { 
+            // if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) { 
                 // Send the temperature to the buffer for moving average
                 xMessageBufferSend( /* The message buffer to write to. */
                     xMotorStateHandler,
@@ -62,13 +64,13 @@ const char* cgi_motor_handler(int iIndex, int iNumParams, char *pcParam[], char 
                     /* The block time; 0 = no block */
                     0 );
                     printf("Data to send at 1: %d\n", dataToSend);
-                xSemaphoreGive(xMotorStateHandlerMutex);
-            }
+                // xSemaphoreGive(xMotorStateHandlerMutex);
+            // }
             //Go back to motor loop
             returnToMotorLoop = pdTRUE;
             // xSemaphoreGive(motor_state_semaphore);                  
             motor_activated = true;
-
+            move_forward();
             // cyw43_arch_gpio_put(2, 1);// left forward
             // cyw43_arch_gpio_put(3, 0);//left backward
             // cyw43_arch_gpio_put(4, 0); // right backward

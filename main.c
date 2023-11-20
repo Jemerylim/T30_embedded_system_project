@@ -28,7 +28,6 @@
 
 //Motor movements
 
-
 //Define sempahore for starting wifi task before initialising HTTPD
 SemaphoreHandle_t wifiConnectedSemaphore;
 
@@ -130,33 +129,33 @@ void motor_control(){
     
 
     // Enable interrupts on wheel encoder GPIO pins
-    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
-    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    // gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    // gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
 
-    gpio_set_irq_enabled_with_callback(21, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
-    gpio_set_irq_enabled_with_callback(20, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
+    // gpio_set_irq_enabled_with_callback(21, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
+    // gpio_set_irq_enabled_with_callback(20, GPIO_IRQ_LEVEL_HIGH | GPIO_IRQ_LEVEL_LOW, true, &ir_sensor_handler);
     
-    
+    int receivedStatus;
+    size_t receivedLength;
 
+    //more the wheels forward to test the duty cycle interrupt via webserver
+    move_forward();
     while (1)
     {  
-        set_motor_speed(0.3);
-        if (left_black == true && right_black == true)
-        {
-            move_forward();
+        printf("i am running motor \n");             
+        // Receive status message from the message buffer
+        receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);
+
+        //if received data from the webserver/buffer
+        if (receivedLength> 0) {
+            if(receivedStatus == 1){
+                set_motor_speed(0.5);
+            }            
+            else {
+                set_motor_speed(0);
+            }            
         }
-        else if (left_black == true && right_black == false)
-        {
-            right_turn_with_angle(90);
-        }
-        else if (left_black == false && right_black == true)
-        {
-            left_turn_with_angle(90);
-        }
-        else if (left_black == false && right_black == true)
-        {
-            stop_movement();
-        }
+        
         vTaskDelay(1000);
     }
 }
@@ -183,9 +182,9 @@ void vLaunch( void) {
     // Assign task `core1_entry` to core 0    
     vTaskCoreAffinitySet(http_task_handle, 1 << 0);
 
-    // Run the motor control on core 1
-    vTaskCoreAffinitySet(motor_task_handle, 1 << 1);
-   
+    // Run the motor control on core 2
+    vTaskCoreAffinitySet(motor_task_handle, 1);
+    
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    
     
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
