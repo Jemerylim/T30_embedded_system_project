@@ -27,34 +27,7 @@
 #define HOLES_ON_DISC 20    // Hole on encoder disc
 #define WHEEL_CIRCUMFERENCE_CM 20.42 // Replace with your wheel's circumference in cm
 
-volatile uint32_t lastLeftEdgeTime = 0;   // Time of the last edge for the left wheel
-volatile uint32_t lastRightEdgeTime = 0;  // Time of the last edge for the right wheel
 
-volatile float speedLeft = 0.0;    // Speed of the left wheel in cm/s
-volatile float speedRight = 0.0;   // Speed of the right wheel in cm/s
-
-volatile float distanceLeft = 0.0; // Distance traveled by the left wheel in cm
-volatile float distanceRight = 0.0;// Distance traveled by the right wheel in cm
-
-uint32_t left_notch, right_notch = 0;
-
-float left_error = 0.0;
-float right_error = 0.0;
-float left_integral = 0.0;
-float right_integral = 0.0;
-float left_derivative = 0.0;
-float right_derivative = 0.0;
-float left_output = 0.0;
-float right_output = 0.0;
-float left_last_error = 0.0;  // Initialize the last error for left wheel
-float right_last_error = 0.0; // Initialize the last error for right wheel
-
-// Variables to track the number of steps and last revolution time for each wheel
-bool left_black = false;
-bool right_black = false;
-float start_degree = 0;
-float degree = 0 ;
-float start = 0;
 
 
 // For speed control
@@ -114,7 +87,7 @@ void left_turn(){
 
 }
 void right_turn_with_angle( float degree){
-    start = measurement();
+    float start = measurement();    
     while(start + degree > measurement())
     {
         right_turn();  
@@ -123,7 +96,7 @@ void right_turn_with_angle( float degree){
         
 }
 void left_turn_with_angle(float degree){
-    start = measurement();
+    float start = measurement();    
     while(start - degree < measurement())
     {
         left_turn();
@@ -132,7 +105,7 @@ void left_turn_with_angle(float degree){
         
 }
 
-void pid_controller(float left_speed, float right_speed)
+void pid_controller(float left_speed, float right_speed, float left_integral, float right_integral, float left_last_error, float right_last_error)
 {
     float Kp = 0.05;  // Proportional gain
     float Ki = 0.01; // Integral gain
@@ -163,66 +136,69 @@ void pid_controller(float left_speed, float right_speed)
 
 // Interrupt handler for wheel encoders
 void speed_sensor_handler(uint gpio, uint32_t events) {
-    uint32_t currentTime = time_us_32();
-
+    // vTaskSuspendAll();
+    // uint32_t currentTime = time_us_32();
     if (gpio == LEFT_WHEEL_ENCODER) 
-    {
-        left_notch ++;
-        // Calculate time between consecutive pulses for the left wheel
-        uint32_t timeDifference = currentTime - lastLeftEdgeTime;
-        lastLeftEdgeTime = currentTime;
-
-        // Calculate speed for the left wheel (cm/s)
-        speedLeft = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
-
-        // Update the distance traveled for the left wheel
-        distanceLeft += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
-    
+    {           
+        int dataToSend = 1;
+        //set the left wheel encoder to true and send it using MessageBufferHandle to main.c
+        xMessageBufferSend( /* The message buffer to write to. */
+                    xMotorLeftEncoderHandler,
+                    /* The source of the data to send. */
+                    (void *) &dataToSend,
+                    /* The length of the data to send. */
+                    sizeof( int ),
+                    /* The block time; 0 = no block */
+                    0 );
+        printf("Data to send at handler %d\n", dataToSend);
     } 
     else if (gpio == RIGHT_WHEEL_ENCODER)
-    {
-        right_notch ++;
-        // Calculate time between consecutive pulses for the right wheel
-        uint32_t timeDifference = currentTime - lastRightEdgeTime;
-        lastRightEdgeTime = currentTime;
+    {        
+        int dataToSend = 1;
+        // set the left wheel encoder to true and send it using MessageBufferHandle to main.c
+        xMessageBufferSend( /* The message buffer to write to. */
+                    xMotorRightEncoderHandler,
+                    /* The source of the data to send. */
+                    (void *) &dataToSend,
+                    /* The length of the data to send. */
+                    sizeof( int ),
+                    /* The block time; 0 = no block */
+                    0 );
+        printf("Data to send at handler %d\n", dataToSend);
+    }        
+    // vTaskDelay(1000);
+    // gpio_acknowledge_irq(gpio, events);
+    // xTaskResumeAll();
 
-        // Calculate speed for the right wheel (cm/s)
-        speedRight = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
-
-        // Update the distance traveled for the right wheel
-        distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;        
-    }
-    printf("left speed: %f\n",speedLeft);
-    printf("right speed: %f\n",speedRight);
 }
 
-void ir_sensor_handler()
-{    
-    int left_ir_value = gpio_get(LEFT_IR_SENSOR);
-    int right_ir_value = gpio_get(RIGHT_IR_SENSOR);
-    printf("left ir value %d\n",left_ir_value);
-    printf("right ir value %d\n",right_ir_value);
-    if(left_ir_value == 1)
-    {
-        printf("left black true\n");
-        left_black = true;
-    }else
-    {
-        printf("left black false\n");
-        left_black = false;
-    }
+// void ir_sensor_handler()
+// {    
+//     int left_ir_value = gpio_get(LEFT_IR_SENSOR);
+//     int right_ir_value = gpio_get(RIGHT_IR_SENSOR);
+//     printf("left ir value %d\n",left_ir_value);
+//     printf("right ir value %d\n",right_ir_value);
+//     if(left_ir_value == 1)
+//     {
+//         printf("left black true\n");
+//         left_black = true;
+//     }else
+//     {
+//         printf("left black false\n");
+//         left_black = false;
+//     }
     
-    if(right_ir_value == 1)
-    {
-        printf("right black true\n");
-        right_black=true;
-    }
-    else
-    {
-        printf("right black false\n");
-        right_black = false;
-    }       
-}
+//     if(right_ir_value == 1)
+//     {
+//         printf("right black true\n");
+//         right_black=true;
+//     }
+//     else
+//     {
+//         printf("right black false\n");
+//         right_black = false;
+//     }       
+// }
 
 // int main()
 // {

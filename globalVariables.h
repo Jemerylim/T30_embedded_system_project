@@ -12,6 +12,8 @@ extern SemaphoreHandle_t motor_state_semaphore;
 /*******Motor Buffers*****/
 static MessageBufferHandle_t xMotorStateHandler;
 static SemaphoreHandle_t xMotorStateHandlerMutex;
+static MessageBufferHandle_t xMotorLeftEncoderHandler;
+static MessageBufferHandle_t xMotorRightEncoderHandler;
 
 /*******IR Line Buffers*****/
 static MessageBufferHandle_t xIRStateHandler;

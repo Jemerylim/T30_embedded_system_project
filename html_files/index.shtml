@@ -24,6 +24,27 @@
             <div class="row justify-content-center">
                 <p>Motor is: <!--#motor--></p>
             </div>             
+            <div class="row justify-content-center">
+                <p>Current Left Wheel Speed:<!--#lspeed--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Current Right Wheel Speed: <!--#rspeed--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Left Wheel Distance Travelled: <!--#ldist--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Right Wheel Distance Travelled: <!--#rdist--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Decoded Barcode is: <!--#bcode--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Ultrasonic distance detected: <!--#ultras--></p>
+            </div>
+            <div class="row justify-content-center">
+                <p>Magnotometer reading: <!--#magno-->°</p>
+            </div>
         </div>
         <div class="container">
             <div class="row justify-content-center">

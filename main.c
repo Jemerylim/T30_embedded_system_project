@@ -26,6 +26,14 @@
 
 #define WIFI_PASSWORD "testing123"
 
+#define BUTTON_GPIO 20
+#define TOGGLE_GPIO 16
+
+void button_handler(uint gpio, uint32_t events) {
+    // Toggle the state of GPIO 16
+    gpio_xor_mask(1ul << TOGGLE_GPIO);
+}
+
 //Motor movements
 
 //Define sempahore for starting wifi task before initialising HTTPD
@@ -101,10 +109,62 @@ void init_http_server() {
 }
 
 void motor_control(){
+    // Structure to hold multiple parameters
+    typedef struct {
+        uint32_t left_notch;
+        uint32_t right_notch; 
+        uint32_t lastLeftEdgeTime;
+        uint32_t lastRightEdgeTime;
+        float speedLeft;
+        float speedRight;
+        float distanceLeft;
+        float distanceRight;
+    } motorParams;
 
-    // Initialize the standard I/O for printf
-    stdio_init_all();
+    typedef struct {
+        int leftWheelEncoder;
+        int rightWheelEncoder;
+    } encoderParams;
+
+    motorParams mParam;
+    mParam.lastLeftEdgeTime = 0;   // Time of the last edge for the left wheel
+    mParam.lastRightEdgeTime = 0;  // Time of the last edge for the right wheel
+
+    mParam.speedLeft = 0.0;    // Speed of the left wheel in cm/s
+    mParam.speedRight = 0.0;   // Speed of the right wheel in cm/s
+
+    mParam.distanceLeft = 0.0; // Distance traveled by the left wheel in cm
+    mParam.distanceRight = 0.0;// Distance traveled by the right wheel in cm
+
+    mParam.left_notch = 0;
+    mParam.right_notch = 0;
+
+    encoderParams eParam;
+    eParam.leftWheelEncoder = 0;
+    eParam.rightWheelEncoder = 0;
+
+    // float left_error = 0.0;
+    // float right_error = 0.0;
+    float left_integral = 0.0;
+    float right_integral = 0.0;
+    float left_derivative = 0.0;
+    float right_derivative = 0.0;
+    float left_output = 0.0;
+    float right_output = 0.0;
+    float left_last_error = 0.0;  // Initialize the last error for left wheel
+    float right_last_error = 0.0; // Initialize the last error for right wheel
+
+    // Variables to track the number of steps and last revolution time for each wheel
+    bool left_black = false;
+    bool right_black = false;
+    // float start_degree = 0;
+    // float degree = 0 ;
+    // float start = 0;
+    uint32_t currentTime = time_us_32();    
     
+    //init all
+    // stdio_init_all();
+
     // Initialize GPIO pins for motor control and wheel encoders
     gpio_init(MOTOR_LEFT_FORWARD);
     gpio_init(MOTOR_LEFT_BACKWARD);
@@ -141,32 +201,72 @@ void motor_control(){
     pwm_set_enabled(slice_num_A, true);
     pwm_set_enabled(slice_num_B, true);
 
-
+    
     // Enable interrupts on wheel encoder GPIO pins
-    // gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
-    // gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
     
     int receivedStatus;
     size_t receivedLength;
+    int receivedLWE;
+    size_t receivedLengthLWE;
+    int receivedRWE;
+    size_t receivedLengthRWE;
 
+    
     //more the wheels forward to test the duty cycle interrupt via webserver
     move_forward();
     while (1)
     {  
         printf("i am running motor \n");             
         // Receive status message from the message buffer
-        receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);
+        receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);        
 
         //if received data from the webserver/buffer
         if (receivedLength> 0) {
             if(receivedStatus == 1){
                 move_forward();
-                pid_controller(speedLeft, speedRight);
+                pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
             }            
             else {
                 stop_movement();                
             }            
         }
+
+        receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
+        if(receivedLengthLWE > 0){
+            if(receivedLWE == 1){       
+                printf("eParam.leftWheelEncoder == 1\n");
+                mParam.left_notch++;
+                // Calculate time between consecutive pulses for the left wheel
+                uint32_t timeDifference = currentTime - mParam.lastLeftEdgeTime;
+                mParam.lastLeftEdgeTime = currentTime;
+
+                // Calculate speed for the left wheel (cm/s)
+                mParam.speedLeft = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
+
+                // Update the distance traveled for the left wheel
+                mParam.distanceLeft += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
+                eParam.leftWheelEncoder = false;
+            }
+        }
+        receivedLengthRWE = xMessageBufferReceive(xMotorRightEncoderHandler, &receivedRWE, sizeof(int), 0);
+        if(receivedLengthRWE > 0){
+            if(receivedRWE == 1){            
+                printf("eParam.rightWheelEncoder ==1\n");
+                mParam.right_notch++;
+                // Calculate time between consecutive pulses for the right wheel
+                uint32_t timeDifference = currentTime - mParam.lastRightEdgeTime;
+                mParam.lastRightEdgeTime = currentTime;
+
+                // Calculate speed for the right wheel (cm/s)
+                mParam.speedRight = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
+
+                // Update the distance traveled for the right wheel
+                mParam.distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
+                eParam.rightWheelEncoder = false;
+            }   
+        }                
         
         vTaskDelay(1000);
     }
@@ -174,6 +274,8 @@ void motor_control(){
 void vLaunch( void) {        
     //Create the message buffers with their sizes
     xMotorStateHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    xMotorLeftEncoderHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    xMotorRightEncoderHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     xMotorStateHandlerMutex = xSemaphoreCreateMutex();
 
     TaskHandle_t wifi_task_handle;    
@@ -182,7 +284,7 @@ void vLaunch( void) {
         
     TaskHandle_t http_task_handle;    
     /* Create a task, storing the handle. */
-    xTaskCreate( init_http_server, "httpThread", configMINIMAL_STACK_SIZE, NULL, 1, &( http_task_handle ) );
+    xTaskCreate( init_http_server, "httpThread", configMINIMAL_STACK_SIZE, NULL, 1, &( http_task_handle ) );    
 
     TaskHandle_t motor_task_handle;    
     /* Create a task, storing the handle. */
@@ -196,7 +298,7 @@ void vLaunch( void) {
 
     // Run the motor control on core 2
     vTaskCoreAffinitySet(motor_task_handle, 1);
-    
+        
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    
     
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1

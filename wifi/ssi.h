@@ -4,7 +4,7 @@
 #include "globalVariables.h"
 
 // SSI tags - tag length limited to 8 bytes by default
-const char * ssi_tags[] = {"volt","temp","led", "motor"};
+const char * ssi_tags[] = {"volt","temp","led", "motor", "lspeed", "rspeed", "ldist", "rdist", "bcode", "ultras", "magno"};
 
 u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {  
   size_t printed;  
@@ -48,37 +48,43 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
           printed = snprintf(pcInsert, iInsertLen, "Running");
         }
 
-        printf("GPIO 2: %d\n GPIO 3: %d\n GPIO 4: %d\n GPIO 5: %d\n", gpio_get(2), gpio_get(3),gpio_get(4),gpio_get(5));
-        // //motor_control variables
-        // int receivedBufferValue;
-        // size_t bytesRead;
-
-        // printf("Case 3 motor running??\n");
-        // if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) {
-        //   // if(motor_left_forward || motor_left_backward || motor_right_backward || motor_right_forward){
-        //   bytesRead = xMessageBufferReceive(xMotorStateHandler, (void *)&receivedBufferValue, sizeof(receivedBufferValue), 0);
-        //    // Release the semaphore to allow the sender to proceed
-        //   xSemaphoreGive(xMotorStateHandlerMutex);
-        //   printf("Received Buffer Value: %d\n", &receivedBufferValue);
-        //   printf("Received bytesread Value: %zu\n", bytesRead);
-        //   if(bytesRead == sizeof(int)){
-            
-        //     if(receivedBufferValue == 1){
-        //       printed = snprintf(pcInsert, iInsertLen, "Running");
-        //       printed = snprintf(pcInsert, iInsertLen, "Hello World I am running");
-        //     }else if(receivedBufferValue ==0){
-        //       printed = snprintf(pcInsert, iInsertLen, "Stopped");
-        //     }
-        //     // Release the mutex when done.
-        //     xSemaphoreGive(xQueueCreateMutex);           
-        //   }
-        //   else {
-        //     printf("breaking ssiTwo\n"); 
-        //     printed = snprintf(pcInsert, iInsertLen, "Error 404");
-        //   }
-        // }
+        printf("GPIO 2: %d\n GPIO 3: %d\n GPIO 4: %d\n GPIO 5: %d\n", gpio_get(2), gpio_get(3),gpio_get(4),gpio_get(5));        
       }    
       break;
+      case 4: //lspeed
+      {
+        printed = snprintf(pcInsert, iInsertLen, "lspeed");
+      }
+      break;
+      case 5: //rspeed
+      {
+        printed = snprintf(pcInsert, iInsertLen, "rspeed");
+      }
+      break;
+      case 6: //ldist
+      {
+        printed = snprintf(pcInsert, iInsertLen, "ldist");
+      }
+      break;
+      case 7: //rdist
+      {
+        printed = snprintf(pcInsert, iInsertLen, "rdist");
+      }
+      break;
+      case 8: //barcode
+      {
+        printed = snprintf(pcInsert, iInsertLen, "bcode");
+      }
+      break;
+      case 9: //ultra
+      {
+        printed = snprintf(pcInsert, iInsertLen, "ultras");
+      }
+      break;
+      case 10: //magno
+      {
+        printed = snprintf(pcInsert, iInsertLen, "magno");
+      }
     default:
       printed = 0;
       break;
