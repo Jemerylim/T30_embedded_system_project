@@ -13,6 +13,7 @@
 #include "hardware/gpio.h"
 #include <stdio.h>
 #include "mag.h"
+#include <math.h>
 
 // Define GPIO pins for motor control and wheel encoders
 #define MOTOR_LEFT_FORWARD  2 
@@ -21,6 +22,8 @@
 #define MOTOR_RIGHT_BACKWARD 4
 #define RIGHT_WHEEL_ENCODER 17
 #define LEFT_WHEEL_ENCODER 16
+#define LEFT_IR_SENSOR 13
+#define RIGHT_IR_SENSOR 12
 #define HOLES_ON_DISC 20    // Hole on encoder disc
 #define WHEEL_CIRCUMFERENCE_CM 20.42 // Replace with your wheel's circumference in cm
 
@@ -55,16 +58,15 @@ float start = 0;
 
 
 // For speed control
-void set_motor_speed(float duty_cycle)
+void set_motor_speed(float left_duty_cycle,float right_duty_cycle)
 {
-    uint slice_num = pwm_gpio_to_slice_num(0);
-    pwm_set_clkdiv(slice_num, 100); // Set the clock divider for the PWM slice.
-    pwm_set_wrap(slice_num, 62500); // Set the wrap value, which determines the period of the PWM signal (in this case, 62500 cycles).
-    pwm_set_enabled(slice_num, true);
-   
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, duty_cycle * 62500); 
-    pwm_set_chan_level(slice_num, PWM_CHAN_B, duty_cycle * 62500 );
+    uint slice_num_A = pwm_gpio_to_slice_num(0);
+    uint slice_num_B = pwm_gpio_to_slice_num(1);
     
+    pwm_set_chan_level(slice_num_A, PWM_CHAN_A, left_duty_cycle * 32150); 
+    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, right_duty_cycle * 32150);
+
+
 }
 
 // Functions to control the movement of the robot
@@ -115,10 +117,8 @@ void right_turn_with_angle( float degree){
     start = measurement();
     while(start + degree > measurement())
     {
-        right_turn();
-    
-    }
-        
+        right_turn();  
+    }       
     stop_movement();
         
 }
@@ -127,36 +127,38 @@ void left_turn_with_angle(float degree){
     while(start - degree < measurement())
     {
         left_turn();
-    }
-        
+    }  
     stop_movement();
         
 }
-// void pid_controller(float left_speed, float right_speed)
-// {
-//     float Kp = 0.1;  // Proportional gain
-//     float Ki = 0.05; // Integral gain
-//     float Kd = 0.35; // Derivative gain
-//     float desired_speed = 10.0; // Set the desired speed in cm/s (adjust as needed)
 
-//     left_error = desired_speed - left_speed;   // Calculate left wheel speed error
-//     right_error = desired_speed - right_speed; // Calculate right wheel speed error
-//     left_integral += left_error;
-//     right_integral += right_error;
-//     left_derivative = left_error - left_last_error;
-//     right_derivative = right_error - right_last_error;
+void pid_controller(float left_speed, float right_speed)
+{
+    float Kp = 0.05;  // Proportional gain
+    float Ki = 0.01; // Integral gain
+    float Kd = 0.05; // Derivative gain
+    float desired_speed = 30.0; // Set the desired speed in cm/s (adjust as needed)
 
-//     left_output = Kp * left_error + Ki * left_integral + Kd * left_derivative;
-//     right_output = Kp * right_error + Ki * right_integral + Kd * right_derivative;
-//     // printf("left output %f\n",left_output);
-//     // printf("right output %f\n",right_output);
+    float left_error = desired_speed - left_speed;   // Calculate left wheel speed error
+    float right_error = desired_speed - right_speed; // Calculate right wheel speed error
 
-//     set_motor_speed(0, left_output);   // Adjust LEFT_MOTOR using PID output
-//     set_motor_speed(1, right_output); // Adjust RIGHT_MOTOR using PID output
+    left_integral += left_error;
+    right_integral += right_error;
 
-//     left_last_error = left_error;   // Update error for next iteration
-//     right_last_error = right_error; // Update error for next iteration
-// }
+    float left_derivative = left_error - left_last_error;
+    float right_derivative = right_error - right_last_error;
+
+    float left_output = Kp * left_error + Ki * left_integral + Kd * left_derivative;
+    float right_output = Kp * right_error + Ki * right_integral + Kd * right_derivative;
+
+    // printf("left output %f\n", left_output);
+    // printf("right output %f\n", right_output);
+
+    set_motor_speed(left_output/100, right_output/100);
+
+    left_last_error = left_error;
+    right_last_error = right_error;
+}
 
 
 // Interrupt handler for wheel encoders
@@ -190,19 +192,17 @@ void speed_sensor_handler(uint gpio, uint32_t events) {
         // Update the distance traveled for the right wheel
         distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;        
     }
-   
-    // pid_controller(speedLeft,speedRight);
+    printf("left speed: %f\n",speedLeft);
+    printf("right speed: %f\n",speedRight);
 }
 
-void ir_sensor_handler(uint gpio, uint32_t events)
-{      
-    // left is 20 right is 21
-    //Testing only
-    //Edge rise means black
-    //Left
-    printf("gpio: %d",gpio);
-    printf("events: %d",events);
-     if(gpio == 20 && events == GPIO_IRQ_LEVEL_HIGH )
+void ir_sensor_handler()
+{    
+    int left_ir_value = gpio_get(LEFT_IR_SENSOR);
+    int right_ir_value = gpio_get(RIGHT_IR_SENSOR);
+    printf("left ir value %d\n",left_ir_value);
+    printf("right ir value %d\n",right_ir_value);
+    if(left_ir_value == 1)
     {
         printf("left black true\n");
         left_black = true;
@@ -212,7 +212,7 @@ void ir_sensor_handler(uint gpio, uint32_t events)
         left_black = false;
     }
     
-    if(gpio == 21 && events == GPIO_IRQ_LEVEL_HIGH)
+    if(right_ir_value == 1)
     {
         printf("right black true\n");
         right_black=true;
@@ -221,7 +221,80 @@ void ir_sensor_handler(uint gpio, uint32_t events)
     {
         printf("right black false\n");
         right_black = false;
-    }   
+    }       
+}
 
+int main()
+{
+
+    // Initialize the standard I/O for printf
+    stdio_init_all();
+    
+    // Initialize GPIO pins for motor control and wheel encoders
+    gpio_init(MOTOR_LEFT_FORWARD);
+    gpio_init(MOTOR_LEFT_BACKWARD);
+    gpio_init(MOTOR_RIGHT_BACKWARD);
+    gpio_init(MOTOR_RIGHT_FORWARD);
+    gpio_init(LEFT_WHEEL_ENCODER);
+    gpio_init(RIGHT_WHEEL_ENCODER);
+    gpio_init(LEFT_IR_SENSOR);
+    gpio_init(RIGHT_IR_SENSOR);
+    
+    // Tell GPIO 0 and 1 they are allocated to the PWM
+    gpio_set_function(0, GPIO_FUNC_PWM);
+    gpio_set_function(1, GPIO_FUNC_PWM);
+
+    // Set GPIO directions
+    gpio_set_dir(MOTOR_LEFT_FORWARD, GPIO_OUT);
+    gpio_set_dir(MOTOR_LEFT_BACKWARD, GPIO_OUT);
+    gpio_set_dir(MOTOR_RIGHT_BACKWARD, GPIO_OUT);
+    gpio_set_dir(MOTOR_RIGHT_FORWARD, GPIO_OUT);
+    gpio_set_dir(LEFT_WHEEL_ENCODER,GPIO_IN);
+    gpio_set_dir(RIGHT_WHEEL_ENCODER,GPIO_IN);
+    gpio_set_dir(LEFT_IR_SENSOR,GPIO_IN);
+    gpio_set_dir(RIGHT_IR_SENSOR,GPIO_IN);
+
+    uint slice_num_A = pwm_gpio_to_slice_num(0);
+    uint slice_num_B = pwm_gpio_to_slice_num(1);
+    pwm_set_clkdiv(slice_num_A, 100); 
+    pwm_set_wrap(slice_num_A, 62500); 
+
+    pwm_set_clkdiv(slice_num_B, 100);
+    pwm_set_wrap(slice_num_B, 16075); 
+    pwm_set_chan_level(slice_num_A, PWM_CHAN_A, 16075); 
+    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, 16075);
+    pwm_set_enabled(slice_num_A, true);
+    pwm_set_enabled(slice_num_B, true);
+
+
+    // Enable interrupts on wheel encoder GPIO pins
+    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+
+    
+    while (1)
+    {  
         
+        // ir_sensor_handler();
+        // if (left_black == true && right_black == true)
+        // {
+        //     move_forward();
+        // }
+        // else if (left_black == true && right_black == false)
+        // {
+        //     right_turn();
+        // }
+        // else if (left_black == false && right_black == true)
+        // {
+        //     left_turn();
+        // }
+        // else if (left_black == false && right_black == true)
+        // {
+        //     stop_movement();
+        // }
+        move_forward();
+        pid_controller(speedLeft, speedRight);
+        
+    }
+    return 0;
 }
