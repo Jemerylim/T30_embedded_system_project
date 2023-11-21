@@ -59,13 +59,7 @@ void stop_movement()
 
 void move_backward(uint32_t left_notch, uint32_t right_notch)
 {
-    printf("Backwards!\n");
-    gpio_put(MOTOR_LEFT_FORWARD, 0);
-    gpio_put(MOTOR_LEFT_BACKWARD, 1);
-    gpio_put(MOTOR_RIGHT_FORWARD, 0);
-    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
-}
-{
+    printf("%llu\n %llu\n", left_notch, right_notch);
     printf("Backwards!\n");
     gpio_put(MOTOR_LEFT_FORWARD, 0);
     gpio_put(MOTOR_LEFT_BACKWARD, 1);

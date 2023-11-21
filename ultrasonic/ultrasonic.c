@@ -98,37 +98,37 @@ void setupUltrasonicPins(uint trigPin, uint echoPin)
     gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &echo_isr);
 }
 
-void ultra_task(__unused void *params) {
-    setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
-    while(true) {
-        uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
-        // uint64_t distance_inch = getInch(TRIG_PIN, ECHO_PIN);
+// void ultra_task(__unused void *params) {
+//     setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
+//     while(true) {
+//         uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
+//         // uint64_t distance_inch = getInch(TRIG_PIN, ECHO_PIN);
 
-        printf("\033[2J\033[H");
+//         printf("\033[2J\033[H");
 
-        printf("Distance in cm: %llu\n", distance_cm);
+//         printf("Distance in cm: %llu\n", distance_cm);
 
-        if (distance_cm <= 10.0)
-        {
-            printf("Obstacle within 10cm");
-            move_backward();
-        }
-        else
-        {
-            printf("No obstacle with 10cm");
-        }
-        // printf("Distance in inches: %llu\n", distance_inch);
+//         if (distance_cm <= 10.0)
+//         {
+//             printf("Obstacle within 10cm");
+//             // move_backward();
+//         }
+//         else
+//         {
+//             printf("No obstacle with 10cm");
+//         }
+//         // printf("Distance in inches: %llu\n", distance_inch);
 
-        // xMessageBufferSend( 
-        //     xControlMessageBufferUltra,    /* The message buffer to write to. */
-        //     (void *) &distance_cm,    /* The source of the data to send. */
-        //     sizeof( distance_cm ),    /* The length of the data to send. */
-        //     0 ); 
+//         // xMessageBufferSend( 
+//         //     xControlMessageBufferUltra,    /* The message buffer to write to. */
+//         //     (void *) &distance_cm,    /* The source of the data to send. */
+//         //     sizeof( distance_cm ),    /* The length of the data to send. */
+//         //     0 ); 
 
-        vTaskDelay(1000); // Sleep for 1 second before taking another reading
-        // vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
+//         vTaskDelay(1000); // Sleep for 1 second before taking another reading
+//         // vTaskDelay(pdMS_TO_TICKS(1000));
+//     }
+// }
 
 // void ultra_check_task(__unused void *params) {
 //     size_t xReceivedBytesUltra;

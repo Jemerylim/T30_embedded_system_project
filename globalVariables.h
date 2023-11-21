@@ -27,6 +27,6 @@ static MessageBufferHandle_t xBarcodeCharHandler;
 
 /*******Ultrasonic Line Buffers*****/
 static MessageBufferHandle_t xControlMessageBufferUltra;
-
+static MessageBufferHandle_t xUltrasonicReverseHandler;
 /*******Webserver Buffers*****/
 static MessageBufferHandle_t xMotorSSIHandler;
