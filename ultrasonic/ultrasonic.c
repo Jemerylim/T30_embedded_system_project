@@ -93,12 +93,11 @@ void setupUltrasonicPins(uint trigPin, uint echoPin)
     gpio_init(echoPin);
     gpio_set_dir(trigPin, GPIO_OUT);
     gpio_set_dir(echoPin, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, echo_isr);
+    gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &echo_isr);
 }
 
 void ultra_task(__unused void *params) {
     setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
-    gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &echo_isr);
     while(true) {
         uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
         // uint64_t distance_inch = getInch(TRIG_PIN, ECHO_PIN);
@@ -123,7 +122,7 @@ void ultra_task(__unused void *params) {
         //     sizeof( distance_cm ),    /* The length of the data to send. */
         //     0 ); 
 
-        sleep_ms(1000); // Sleep for 1 second before taking another reading
+        vTaskDelay(1000); // Sleep for 1 second before taking another reading
         // vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

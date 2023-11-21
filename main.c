@@ -333,6 +333,7 @@ void vLaunch( void) {
 
     // Run the motor control on core 2
     vTaskCoreAffinitySet(motor_task_handle, 1);
+    vTaskCoreAffinitySet(ultratask, 1);
         
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    
     
