@@ -42,6 +42,7 @@ void set_motor_speed(float left_duty_cycle,float right_duty_cycle)
 // Functions to control the movement of the robot
 void move_forward()
 {
+    printf("Forward!\n");
     gpio_put(MOTOR_LEFT_FORWARD, 1);
     gpio_put(MOTOR_LEFT_BACKWARD, 0);
     gpio_put(MOTOR_RIGHT_FORWARD, 1);
@@ -57,14 +58,7 @@ void stop_movement()
     gpio_put(MOTOR_RIGHT_FORWARD, 0);
 }
 
-void move_backward(uint32_t left_notch, uint32_t right_notch)
-{
-    printf("Backwards!\n");
-    gpio_put(MOTOR_LEFT_FORWARD, 0);
-    gpio_put(MOTOR_LEFT_BACKWARD, 1);
-    gpio_put(MOTOR_RIGHT_FORWARD, 0);
-    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
-}
+void move_backward()
 {
     printf("Backwards!\n");
     gpio_put(MOTOR_LEFT_FORWARD, 0);

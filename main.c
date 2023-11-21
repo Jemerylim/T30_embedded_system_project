@@ -220,12 +220,9 @@ void motor_control(){
     uint32_t receivedEncoderTimer;
     size_t receivedLengthEncoderT;
 
-    
-    //more the wheels forward to test the duty cycle interrupt via webserver
-    move_forward();
     while (1)
     {  
-        printf("i am running motor \n");             
+        // printf("i am running motor \n");             
         // Receive status message from the message buffer
         receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);        
 
@@ -239,6 +236,7 @@ void motor_control(){
                 stop_movement();                
             }            
         }
+        
 
         receivedLengthEncoderT = xMessageBufferReceive(xMotorEncoderTimerHandler, &receivedEncoderTimer, sizeof(uint32_t), 0);
         receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
@@ -280,6 +278,10 @@ void motor_control(){
                 xMessageBufferSend(xMotorRDistToWebHandler, (void *) &mParam.distanceRight, sizeof(float), 0);
                 printf("mParam.rightWheelEncoder:%.2f",mParam.distanceRight);
             }   
+        }
+
+        if(receivedLengthRWE || receivedLengthLWE){
+            pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
         }                
         
         vTaskDelay(100);

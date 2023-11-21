@@ -110,12 +110,13 @@ void ultra_task(__unused void *params) {
 
         if (distance_cm <= 10.0)
         {
-            printf("Obstacle within 10cm");
+            printf("Obstacle within 10cm\n");
             move_backward();
         }
         else
         {
-            printf("No obstacle with 10cm");
+            move_forward();
+            printf("No obstacle with 10cm\n");
         }
         // printf("Distance in inches: %llu\n", distance_inch);
 
