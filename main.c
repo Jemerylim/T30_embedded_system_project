@@ -205,8 +205,6 @@ void motor_control(){
     pwm_set_enabled(slice_num_A, true);
     pwm_set_enabled(slice_num_B, true);
 
-    //Set up ultrasonic
-    setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
     
     // Enable interrupts on wheel encoder GPIO pins
     gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
@@ -282,18 +280,8 @@ void motor_control(){
                 xMessageBufferSend(xMotorRDistToWebHandler, (void *) &mParam.distanceRight, sizeof(float), 0);
                 printf("mParam.rightWheelEncoder:%.2f",mParam.distanceRight);
             }   
-        }       
-        //Checks for ultrasonic stuff
-        uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);         
-        printf("\033[2J\033[H");
-        printf("Distance in cm: %llu\n", distance_cm);
-        if(distance_cm <= 10.0){
-            printf("Obstacle within 10cm");
-            move_backward(mParam.left_notch, mParam.right_notch);
-        }
-        else{
-            printf("No obstacle with 10cm");
-        }
+        }                
+        
         vTaskDelay(100);
     }
 }
@@ -314,8 +302,6 @@ void vLaunch( void) {
     xMotorRDistToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     //Create buffer to send for ultrasonic
     xControlMessageBufferUltra = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
-    //Create buffer to send data from main.c to ultrasonic
-    xUltrasonicReverseHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     //Send data from CGI to SSI to check states
     xMotorSSIHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
 
@@ -336,8 +322,8 @@ void vLaunch( void) {
     xTaskCreate( motor_control, "motorThread", configMINIMAL_STACK_SIZE, NULL, 3, &( motor_task_handle ) );
 
     /* Create task for ultrasonic*/
-    // TaskHandle_t ultratask;
-    // xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
+    TaskHandle_t ultratask;
+    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
 
     // Assign task `init_wifi` to core 0    
     vTaskCoreAffinitySet(wifi_task_handle, 1 << 0);
@@ -347,7 +333,7 @@ void vLaunch( void) {
 
     // Run the motor control on core 2
     vTaskCoreAffinitySet(motor_task_handle, 1);
-    // vTaskCoreAffinitySet(ultratask, 1);
+    vTaskCoreAffinitySet(ultratask, 1);
         
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    
     
