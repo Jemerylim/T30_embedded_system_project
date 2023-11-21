@@ -223,7 +223,7 @@ void motor_control(){
     move_forward();
     while (1)
     {  
-        printf("i am running motor \n");             
+        // printf("i am running motor \n");             
         // Receive status message from the message buffer
         receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);        
 

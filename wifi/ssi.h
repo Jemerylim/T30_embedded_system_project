@@ -140,16 +140,43 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
         char receivedChar[11];
         size_t receivedLength;
 
+        // receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*11, 0); 
+        // if(receivedLength > 0){
+        //   // printf("receivedChar: %s I AM INSIDE\n", receivedChar);
+        //   // New data received, update both the display and the previous value
+        //   printed = snprintf(pcInsert, iInsertLen, "%c", receivedChar[0]);
+        //   strncpy(previousDecoded, receivedChar, sizeof(previousDecoded) - 1);
+        //   previousDecoded[sizeof(previousDecoded) - 1] = '\0';  // Ensure null-termination
+        // } else {
+        //   //no new data, use the previous value
+        //   printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
+        // }
+        
         receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*11, 0); 
-        if(receivedLength > 0){
-          printf("receivedChar: %s I AM INSIDE\n", receivedChar);
-          // New data received, update both the display and the previous value
-          printed = snprintf(pcInsert, iInsertLen, "%c", receivedChar[0]);
-          strncpy(previousDecoded, receivedChar, sizeof(previousDecoded) - 1);
-          previousDecoded[sizeof(previousDecoded) - 1] = '\0';  // Ensure null-termination
+        if (receivedLength > 0) {
+            // New data received, update both the display and the previous value
+            int validCharCount = 0;
+            for (int i = 0; i < receivedLength; ++i) {
+                if (isprint(receivedChar[i])) {
+                    // Character is printable, consider it valid
+                    validCharCount++;
+                }
+            }
+
+            printf("Number of valid characters: %d\n", validCharCount);
+
+            // Update the display with the first valid character
+            if (validCharCount > 0) {
+                printed = snprintf(pcInsert, iInsertLen, "%c", receivedChar[0]);
+                strncpy(previousDecoded, receivedChar, sizeof(previousDecoded) - 1);
+                previousDecoded[sizeof(previousDecoded) - 1] = '\0';  // Ensure null-termination
+            } else {
+                // No valid characters, use the previous value
+                printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
+            }
         } else {
-          //no new data, use the previous value
-          printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
+            // No new data, use the previous value
+            printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
         }
       }
       break;
