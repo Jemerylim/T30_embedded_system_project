@@ -107,28 +107,38 @@ void left_turn_with_angle(float degree){
 
 void pid_controller(float left_speed, float right_speed, float left_integral, float right_integral, float left_last_error, float right_last_error)
 {
-    float Kp = 0.05;  // Proportional gain
-    float Ki = 0.01; // Integral gain
-    float Kd = 0.05; // Derivative gain
-    float desired_speed = 30.0; // Set the desired speed in cm/s (adjust as needed)
+    // PID constants for left wheel
+    float Kp_left = 1.6;  // Proportional gain
+    float Ki_left = 0.40; // Integral gain
+    float Kd_left = 0.41; // Derivative gain
 
-    float left_error = desired_speed - left_speed;   // Calculate left wheel speed error
-    float right_error = desired_speed - right_speed; // Calculate right wheel speed error
+    // PID constants for right wheel
+    float Kp_right = 1.6;  // Proportional gain
+    float Ki_right = 0.40; // Integral gain
+    float Kd_right = 0.41; // Derivative gain
 
+    float desired_speed = 60.0; // Set the desired speed in cm/s (adjust as needed)
+
+    // Calculate errors for each wheel
+    float left_error = desired_speed - left_speed;
+    float right_error = desired_speed - right_speed;
+
+    // Update integral for each wheel
     left_integral += left_error;
     right_integral += right_error;
 
+    // Calculate derivative for each wheel
     float left_derivative = left_error - left_last_error;
     float right_derivative = right_error - right_last_error;
 
-    float left_output = Kp * left_error + Ki * left_integral + Kd * left_derivative;
-    float right_output = Kp * right_error + Ki * right_integral + Kd * right_derivative;
+    // PID output for each wheel
+    float left_output = Kp_left * left_error + Ki_left * left_integral + Kd_left * left_derivative;
+    float right_output = Kp_right * right_error + Ki_right * right_integral + Kd_right * right_derivative;
 
-    // printf("left output %f\n", left_output);
-    // printf("right output %f\n", right_output);
+    // Set motor speed for each wheel
+    set_motor_speed(left_output/1000, right_output/1000);
 
-    set_motor_speed(left_output/100, right_output/100);
-
+    // Update last error for next iteration
     left_last_error = left_error;
     right_last_error = right_error;
 }

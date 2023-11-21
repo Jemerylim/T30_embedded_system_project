@@ -194,12 +194,12 @@ void motor_control(){
     uint slice_num_A = pwm_gpio_to_slice_num(0);
     uint slice_num_B = pwm_gpio_to_slice_num(1);
     pwm_set_clkdiv(slice_num_A, 100); 
-    pwm_set_wrap(slice_num_A, 62500); 
+    pwm_set_wrap(slice_num_A, 32150); 
 
     pwm_set_clkdiv(slice_num_B, 100);
-    pwm_set_wrap(slice_num_B, 16075); 
-    pwm_set_chan_level(slice_num_A, PWM_CHAN_A, 16075); 
-    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, 16075);
+    pwm_set_wrap(slice_num_B, 32150); 
+    pwm_set_chan_level(slice_num_A, PWM_CHAN_A, 32150); 
+    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, 32150); 
     pwm_set_enabled(slice_num_A, true);
     pwm_set_enabled(slice_num_B, true);
 
@@ -223,7 +223,7 @@ void motor_control(){
     move_forward();
     while (1)
     {  
-        // printf("i am running motor \n");             
+        printf("i am running motor \n");             
         // Receive status message from the message buffer
         receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);        
 
