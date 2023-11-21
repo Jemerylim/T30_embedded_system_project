@@ -19,6 +19,8 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 
+#include "motor/motor.h"
+
 #define mbaTASK_MESSAGE_BUFFER_SIZE       ( 60 )
 
 #ifndef PING_ADDR
@@ -109,6 +111,7 @@ void ultra_task(__unused void *params) {
         if (distance_cm <= 10.0)
         {
             printf("Obstacle within 10cm");
+            move_backward();
         }
         else
         {

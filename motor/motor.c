@@ -27,9 +27,6 @@
 #define HOLES_ON_DISC 20    // Hole on encoder disc
 #define WHEEL_CIRCUMFERENCE_CM 20.42 // Replace with your wheel's circumference in cm
 
-
-
-
 // For speed control
 void set_motor_speed(float left_duty_cycle,float right_duty_cycle)
 {
@@ -60,7 +57,14 @@ void stop_movement()
     gpio_put(MOTOR_RIGHT_FORWARD, 0);
 }
 
-void move_backward()
+void move_backward(uint32_t left_notch, uint32_t right_notch)
+{
+    printf("Backwards!\n");
+    gpio_put(MOTOR_LEFT_FORWARD, 0);
+    gpio_put(MOTOR_LEFT_BACKWARD, 1);
+    gpio_put(MOTOR_RIGHT_FORWARD, 0);
+    gpio_put(MOTOR_RIGHT_BACKWARD, 1);
+}
 {
     printf("Backwards!\n");
     gpio_put(MOTOR_LEFT_FORWARD, 0);
@@ -79,6 +83,7 @@ void right_turn(){
 
 }
 void left_turn(){
+    
     printf("left turn!\n");
     gpio_put(MOTOR_LEFT_FORWARD, 0);
     gpio_put(MOTOR_LEFT_BACKWARD, 1);
