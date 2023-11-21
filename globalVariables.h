@@ -26,6 +26,7 @@ static MessageBufferHandle_t xBarcodeCharHandler;
 /*******Magnometer Line Buffers*****/
 
 /*******Ultrasonic Line Buffers*****/
+static MessageBufferHandle_t xControlMessageBufferUltra;
 
 /*******Webserver Buffers*****/
 static MessageBufferHandle_t xMotorSSIHandler;

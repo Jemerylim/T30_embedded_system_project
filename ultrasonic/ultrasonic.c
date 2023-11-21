@@ -30,10 +30,11 @@
 
 #define TEST_TASK_PRIORITY				( tskIDLE_PRIORITY + 1UL )
 
-static MessageBufferHandle_t xControlMessageBufferUltra;
+#define TRIG_PIN 10
+#define ECHO_PIN 11
 
-const uint TRIG_PIN = 10;
-const uint ECHO_PIN = 11;
+// static MessageBufferHandle_t xControlMessageBufferUltra;
+
 int timeout = 26100;
 volatile uint64_t start_time_us = 0;
 volatile uint64_t end_time_us = 0;
@@ -44,8 +45,8 @@ float P = 1;    // Estimated error covariance
 float Q = 0.01; // Process noise covariance
 float R = 1;    // Measurement noise covariance
 
-void echo_isr(void) {
-    if (gpio_get(ECHO_PIN)) {  // Rising edge
+void echo_isr(uint gpio, uint32_t events) {
+    if (gpio == ECHO_PIN && events == GPIO_IRQ_EDGE_RISE) {  // Rising edge
         start_time_us = to_us_since_boot(get_absolute_time());
     } else {  // Falling edge
         end_time_us = to_us_since_boot(get_absolute_time());
@@ -86,7 +87,18 @@ uint64_t getCm(uint trigPin, uint echoPin)
     return pulseLength / 29 / 2;
 }
 
+void setupUltrasonicPins(uint trigPin, uint echoPin)
+{
+    gpio_init(trigPin);
+    gpio_init(echoPin);
+    gpio_set_dir(trigPin, GPIO_OUT);
+    gpio_set_dir(echoPin, GPIO_IN);
+    gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, echo_isr);
+}
+
 void ultra_task(__unused void *params) {
+    setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
+    gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &echo_isr);
     while(true) {
         uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
         // uint64_t distance_inch = getInch(TRIG_PIN, ECHO_PIN);
@@ -116,79 +128,72 @@ void ultra_task(__unused void *params) {
     }
 }
 
-void ultra_check_task(__unused void *params) {
-    size_t xReceivedBytesUltra;
-    uint64_t fReceivedDataUltra;
-    while(true) {
-        xReceivedBytesUltra = xMessageBufferReceive(xControlMessageBufferUltra, (void *)&fReceivedDataUltra, sizeof(fReceivedDataUltra), portMAX_DELAY);
+// void ultra_check_task(__unused void *params) {
+//     size_t xReceivedBytesUltra;
+//     uint64_t fReceivedDataUltra;
+//     while(true) {
+//         xReceivedBytesUltra = xMessageBufferReceive(xControlMessageBufferUltra, (void *)&fReceivedDataUltra, sizeof(fReceivedDataUltra), portMAX_DELAY);
         
-        if (xReceivedBytesUltra == sizeof(fReceivedDataUltra))
-        {
-             // Convert the uint64_t measurement to a float
-            float measurement = (float)fReceivedDataUltra;
+//         if (xReceivedBytesUltra == sizeof(fReceivedDataUltra))
+//         {
+//              // Convert the uint64_t measurement to a float
+//             float measurement = (float)fReceivedDataUltra;
 
-            // Kalman Filter update
-            float y = measurement - x_est;  // Calculate the innovation
-            float S = P + R;                       // Estimate error + measurement error
-            float K = P / S;                       // Kalman gain
-            x_est = x_est + K * y;                 // Update the estimate
-            P = (1 - K) * P + Q;                   // Update the error covariance
+//             // Kalman Filter update
+//             float y = measurement - x_est;  // Calculate the innovation
+//             float S = P + R;                       // Estimate error + measurement error
+//             float K = P / S;                       // Kalman gain
+//             x_est = x_est + K * y;                 // Update the estimate
+//             P = (1 - K) * P + Q;                   // Update the error covariance
 
-            printf("\033[2J\033[H");
-            printf("Distance in cm: %.2f\n", x_est);
-            printf("Distance in cm(unfiltered): %llu\n", fReceivedDataUltra);
+//             printf("\033[2J\033[H");
+//             printf("Distance in cm: %.2f\n", x_est);
+//             printf("Distance in cm(unfiltered): %llu\n", fReceivedDataUltra);
 
-            if (x_est <= 20.0)
-            {
-                printf("Obstacle within 20cm");
-            }
-            else
-            {
-                printf("No obstacle with 20cm");
-            }
-        }
-        else
-        {
-            printf("Failed to receive distance data from the message buffer.\n");
-        }
+//             if (x_est <= 20.0)
+//             {
+//                 printf("Obstacle within 20cm");
+//             }
+//             else
+//             {
+//                 printf("No obstacle with 20cm");
+//             }
+//         }
+//         else
+//         {
+//             printf("Failed to receive distance data from the message buffer.\n");
+//         }
 
-        sleep_ms(1000); // Sleep for 1 second before taking another reading
-        // vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
+//         sleep_ms(1000); // Sleep for 1 second before taking another reading
+//         // vTaskDelay(pdMS_TO_TICKS(1000));
+//     }
+// }
 
-void setupUltrasonicPins(uint trigPin, uint echoPin)
-{
-    gpio_init(trigPin);
-    gpio_init(echoPin);
-    gpio_set_dir(trigPin, GPIO_OUT);
-    gpio_set_dir(echoPin, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, echo_isr);
-}
 
-int main( void )
-{
-    stdio_init_all();
 
-    setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
+// int main( void )
+// {
+//     stdio_init_all();
 
-    TaskHandle_t ultratask;
-    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
-    // TaskHandle_t ultrachecktask;
-    // xTaskCreate(ultra_check_task, "ultrachecktaskThread", configMINIMAL_STACK_SIZE, NULL, 2, &ultrachecktask);
+//     // setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
+
+//     // TaskHandle_t ultratask;
+//     // xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
+//     // TaskHandle_t ultrachecktask;
+//     // xTaskCreate(ultra_check_task, "ultrachecktaskThread", configMINIMAL_STACK_SIZE, NULL, 2, &ultrachecktask);
 	
-    xControlMessageBufferUltra = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+//     // xControlMessageBufferUltra = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
 
     
 
-    // while (true)
-    // {
-    //     /* code */
-    //     uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
-    //     printf("\033[2J\033[H");
-    //     printf("Distance in cm: %llu\n", distance_cm);
-    //     sleep_ms(1000);
-    // }
+//     // while (true)
+//     // {
+//     //     /* code */
+//     //     uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
+//     //     printf("\033[2J\033[H");
+//     //     printf("Distance in cm: %llu\n", distance_cm);
+//     //     sleep_ms(1000);
+//     // }
     
-    vTaskStartScheduler();
-}
+//     vTaskStartScheduler();
+// }

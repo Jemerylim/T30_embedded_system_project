@@ -18,6 +18,8 @@
 
 //Include barcode driver
 #include "irline/barcode_scanner.c"
+//Include ultrasonic driver
+#include "ultrasonic/ultrasonic.c"
 
 #ifndef RUN_FREERTOS_ON_CORE
 #define RUN_FREERTOS_ON_CORE 0
@@ -298,7 +300,8 @@ void vLaunch( void) {
     //Buffer to send Left and Right distance travelled by the wheel to Webserver
     xMotorLDistToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     xMotorRDistToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
-    
+    //Create buffer to send for ultrasonic
+    xControlMessageBufferUltra = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     //Send data from CGI to SSI to check states
     xMotorSSIHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
 
@@ -317,6 +320,10 @@ void vLaunch( void) {
     TaskHandle_t motor_task_handle;    
     /* Create a task, storing the handle. */
     xTaskCreate( motor_control, "motorThread", configMINIMAL_STACK_SIZE, NULL, 3, &( motor_task_handle ) );
+
+    /* Create task for ultrasonic*/
+    TaskHandle_t ultratask;
+    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
 
     // Assign task `init_wifi` to core 0    
     vTaskCoreAffinitySet(wifi_task_handle, 1 << 0);
