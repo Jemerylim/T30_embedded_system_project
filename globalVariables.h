@@ -16,9 +16,12 @@ static MessageBufferHandle_t xMotorLeftEncoderHandler;
 static MessageBufferHandle_t xMotorRightEncoderHandler;
 static MessageBufferHandle_t xMotorLWEdataToWebHandler;
 static MessageBufferHandle_t xMotorRWEdataToWebHandler;
+static MessageBufferHandle_t xMotorEncoderTimerHandler;
+static MessageBufferHandle_t xMotorLDistToWebHandler;
+static MessageBufferHandle_t xMotorRDistToWebHandler;
 
 /*******IR Line Buffers*****/
-static MessageBufferHandle_t xIRStateHandler;
+static MessageBufferHandle_t xBarcodeCharHandler;
 
 /*******Magnometer Line Buffers*****/
 

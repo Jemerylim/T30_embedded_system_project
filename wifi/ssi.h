@@ -101,17 +101,56 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
       break;
       case 6: //ldist
       {
-        printed = snprintf(pcInsert, iInsertLen, "ldist");
+        static float previousLDdata = 0;  // Static variable to store the previous value
+        float receivedLDdata;
+        size_t receivedLength;
+
+        receivedLength = xMessageBufferReceive(xMotorLDistToWebHandler, &receivedLDdata, sizeof(float), 0); 
+        if(receivedLength > 0){
+          // New data received, update both the display and the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%.2f", receivedLDdata);
+          printf("receive LDATA: %f\n", receivedLDdata);
+          previousLDdata = receivedLDdata;
+        } else {
+          //no new data, use the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%.2f", previousLDdata);
+        }
       }
       break;
       case 7: //rdist
       {
-        printed = snprintf(pcInsert, iInsertLen, "rdist");
+        static float previousRDdata = 0;  // Static variable to store the previous value
+        float receivedRDdata;
+        size_t receivedLength;
+
+        receivedLength = xMessageBufferReceive(xMotorRDistToWebHandler, &receivedRDdata, sizeof(float), 0); 
+        if(receivedLength > 0){
+          // New data received, update both the display and the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%.2f", receivedRDdata);
+          previousRDdata = receivedRDdata;
+        } else {
+          //no new data, use the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%.2f", previousRDdata);
+        }
       }
       break;
       case 8: //barcode
       {
-        printed = snprintf(pcInsert, iInsertLen, "bcode");
+        static char previousDecoded[11];  // Static variable to store the previous value
+        char receivedChar[11];
+        size_t receivedLength;
+
+        receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*11, 0); 
+        if(receivedLength > 0){
+          printf("receivedChar: %s I AM INSIDE\n", receivedChar);
+          // New data received, update both the display and the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%c", receivedChar[0]);
+          strncpy(previousDecoded, receivedChar, sizeof(previousDecoded) - 1);
+          previousDecoded[sizeof(previousDecoded) - 1] = '\0';  // Ensure null-termination
+        } else {
+          //no new data, use the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
+        }
       }
       break;
       case 9: //ultra

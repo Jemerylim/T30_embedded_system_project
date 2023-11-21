@@ -16,6 +16,9 @@
 #include "motor/motor.c"
 #include "globalVariables.h"
 
+//Include barcode driver
+#include "irline/barcode_scanner.c"
+
 #ifndef RUN_FREERTOS_ON_CORE
 #define RUN_FREERTOS_ON_CORE 0
 #endif
@@ -175,8 +178,8 @@ void motor_control(){
     gpio_init(RIGHT_IR_SENSOR);
     
     // Tell GPIO 0 and 1 they are allocated to the PWM
-    gpio_set_function(11, GPIO_FUNC_PWM);
-    gpio_set_function(12, GPIO_FUNC_PWM);
+    gpio_set_function(0, GPIO_FUNC_PWM);
+    gpio_set_function(1, GPIO_FUNC_PWM);
 
     // Set GPIO directions
     gpio_set_dir(MOTOR_LEFT_FORWARD, GPIO_OUT);
@@ -204,13 +207,16 @@ void motor_control(){
     // Enable interrupts on wheel encoder GPIO pins
     gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
     gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
-    
+    gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+
     int receivedStatus;
     size_t receivedLength;
     int receivedLWE;
     size_t receivedLengthLWE;
     int receivedRWE;
     size_t receivedLengthRWE;
+    uint32_t receivedEncoderTimer;
+    size_t receivedLengthEncoderT;
 
     
     //more the wheels forward to test the duty cycle interrupt via webserver
@@ -225,21 +231,22 @@ void motor_control(){
         if (receivedLength> 0) {
             if(receivedStatus == 1){
                 move_forward();
-                pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
+                // pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
             }            
             else {
                 stop_movement();                
             }            
         }
 
+        receivedLengthEncoderT = xMessageBufferReceive(xMotorEncoderTimerHandler, &receivedEncoderTimer, sizeof(uint32_t), 0);
         receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
-        if(receivedLengthLWE > 0){
+        if(receivedLengthLWE > 0){            
             if(receivedLWE == 1){       
-                uint32_t currentTime = time_us_32();    
+                    
                 mParam.left_notch++;
                 // Calculate time between consecutive pulses for the left wheel
-                uint32_t timeDifference = currentTime - mParam.lastLeftEdgeTime;
-                mParam.lastLeftEdgeTime = currentTime;
+                uint32_t timeDifference = receivedEncoderTimer - mParam.lastLeftEdgeTime;
+                mParam.lastLeftEdgeTime = receivedEncoderTimer;
 
                 // Calculate speed for the left wheel (cm/s)
                 mParam.speedLeft = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
@@ -248,17 +255,18 @@ void motor_control(){
                 mParam.distanceLeft += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
                 eParam.leftWheelEncoder = false;
                 xMessageBufferSend(xMotorLWEdataToWebHandler, (void *) &mParam.speedLeft, sizeof(float), 0);
-                printf("eParam.leftWheelEncoder:%.2f",mParam.speedLeft);
+                xMessageBufferSend(xMotorLDistToWebHandler, (void *) &mParam.distanceLeft, sizeof(float), 0);
+                printf("eParam.leftWheelEncoder:%.2f",mParam.distanceLeft);
             }
         }
         receivedLengthRWE = xMessageBufferReceive(xMotorRightEncoderHandler, &receivedRWE, sizeof(int), 0);
         if(receivedLengthRWE > 0){
-            if(receivedRWE == 1){       
-                uint32_t currentTime = time_us_32();                         
+            
+            if(receivedRWE == 1){                                                
                 mParam.right_notch++;
                 // Calculate time between consecutive pulses for the right wheel
-                uint32_t timeDifference = currentTime - mParam.lastRightEdgeTime;
-                mParam.lastRightEdgeTime = currentTime;
+                uint32_t timeDifference = receivedEncoderTimer - mParam.lastRightEdgeTime;
+                mParam.lastRightEdgeTime = receivedEncoderTimer;
 
                 // Calculate speed for the right wheel (cm/s)
                 mParam.speedRight = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
@@ -266,14 +274,16 @@ void motor_control(){
                 // Update the distance traveled for the right wheel
                 mParam.distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
                 eParam.rightWheelEncoder = false;
-                xMessageBufferSend(xMotorLWEdataToWebHandler, (void *) &mParam.speedRight, sizeof(float), 0);
-                printf("eParam.leftWheelEncoder:%.2f",mParam.speedRight);
+                xMessageBufferSend(xMotorRWEdataToWebHandler, (void *) &mParam.speedRight, sizeof(float), 0);
+                xMessageBufferSend(xMotorRDistToWebHandler, (void *) &mParam.distanceRight, sizeof(float), 0);
+                printf("mParam.rightWheelEncoder:%.2f",mParam.distanceRight);
             }   
         }                
         
         vTaskDelay(100);
     }
 }
+
 void vLaunch( void) {        
     //Create the message buffers with their sizes
     xMotorStateHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
@@ -283,10 +293,17 @@ void vLaunch( void) {
     //send the LWE and RWE data to webserver
     xMotorLWEdataToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     xMotorRWEdataToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
-
+    //create buffer for wheel encoder timer
+    xMotorEncoderTimerHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    //Buffer to send Left and Right distance travelled by the wheel to Webserver
+    xMotorLDistToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    xMotorRDistToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    
     //Send data from CGI to SSI to check states
     xMotorSSIHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
 
+    //Create a buffer to send decoded barcode text to webserver
+    xBarcodeCharHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     xMotorStateHandlerMutex = xSemaphoreCreateMutex();
 
     TaskHandle_t wifi_task_handle;    

@@ -7,7 +7,7 @@
 #include "pico/time.h"
 #include <string.h>
 
-#define BARCODE_SENSOR 22
+#define BARCODE_SENSOR 7
 #define ARRAY_SIZE 10
 #define DICTIONARY_SIZE 30
 #define DEBOUNCE 100
@@ -70,7 +70,7 @@ thick white 2
 thin white 3
 */
 
-void init_pins() {
+void init_barcode_pins() {
     gpio_init(BARCODE_SENSOR);
     gpio_set_dir(BARCODE_SENSOR, GPIO_IN);
 }
@@ -155,11 +155,17 @@ static int decodeBarCode(int barcodeIndex){
             printf("Match found for key %c\n", dictionary[i].key);
             legit = 1;
             decodedBarcode[barcodeIndex] =dictionary[i].key;
+            printf("DecodedBarcode: %c\n", decodedBarcode[barcodeIndex]);
+            xMessageBufferSend(xBarcodeCharHandler, (void*) &decodedBarcode[barcodeIndex], sizeof(decodeBarCode), 0);
             break;
         }
     }
     if(legit==0){
-        printf("Not valid\n"); 
+        char notValid[11];
+        // Copy the string "Not Valid" into the notValid array
+        strcpy(notValid, "Not Valid");  
+        printf("Not valid:%s\n", notValid);
+        xMessageBufferSend(xBarcodeCharHandler, (void*) &notValid, sizeof(notValid), 0);
         return 0;
     }else{
         return 1;
@@ -167,16 +173,17 @@ static int decodeBarCode(int barcodeIndex){
 }
 
 static void readBarcode(){
+    
     if(decodedBarcode[0] == '*' && decodedBarcode[2] =='*' ){
         printf("%c %c %c",decodedBarcode[0],decodedBarcode[1],decodedBarcode[2]);
-        printf("Barcode says %c",decodedBarcode[1]);
+        printf("Barcode says %c",decodedBarcode[1]);        
     }else{
         printf("%c %c %c",decodedBarcode[0],decodedBarcode[1],decodedBarcode[2]);
-        printf("Barcode is not valid because the first and last values are not *");
+        printf("Barcode is not valid because the first and last values are not *");              
     }
 }
 
-void interrupt_callback(uint gpio, uint32_t events) {
+void interrupt_callback_barcode(uint gpio, uint32_t events) {
     uint64_t current = to_ms_since_boot(get_absolute_time());
     if ((current - interrupttime) < DEBOUNCE)
     {
@@ -210,12 +217,12 @@ void interrupt_callback(uint gpio, uint32_t events) {
 
 }
 
-int main() {
-    stdio_usb_init();
-    init_pins();
-    adc_init();
-    gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback);
-    while (true) {
-            tight_loop_contents();
-        }
-}
+// int main() {
+//     stdio_usb_init();
+//     init_pins();
+//     adc_init();
+//     gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback);
+//     while (true) {
+//             tight_loop_contents();
+//         }
+// }

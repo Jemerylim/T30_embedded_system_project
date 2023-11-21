@@ -137,7 +137,8 @@ void pid_controller(float left_speed, float right_speed, float left_integral, fl
 // Interrupt handler for wheel encoders
 void speed_sensor_handler(uint gpio, uint32_t events) {
     // vTaskSuspendAll();
-    // uint32_t currentTime = time_us_32();
+    uint32_t currentTime = time_us_32();
+    xMessageBufferSend(xMotorEncoderTimerHandler, (void *) &currentTime, sizeof(uint32_t), 0);
     if (gpio == LEFT_WHEEL_ENCODER) 
     {           
         int dataToSend = 1;
