@@ -61,11 +61,11 @@ const char* cgi_motor_handler(int iIndex, int iNumParams, char *pcParam[], char 
             // xSemaphoreGive(motor_state_semaphore);                              
             move_forward();
             printf("Forward\n");
-
         }            
     }
     // printf("Motor TESTING\n %d\t %d\t %s\t %s\t\n", iIndex, iNumParams, *pcParam, *pcValue);
-
+    xMessageBufferSend(xMotorSSIHandler, (void*) &iIndex, sizeof(int), 0);
+    // printf("Motor TESTING\n %d\t %d\t %s\t %s\t\n", iIndex, iNumParams, pcParam[0], *pcValue[0]);
     //Send the index page back to the user
     return "/index.shtml";
 }

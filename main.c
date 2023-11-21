@@ -159,8 +159,7 @@ void motor_control(){
     bool right_black = false;
     // float start_degree = 0;
     // float degree = 0 ;
-    // float start = 0;
-    uint32_t currentTime = time_us_32();    
+    // float start = 0;    
     
     //init all
     // stdio_init_all();
@@ -236,7 +235,7 @@ void motor_control(){
         receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
         if(receivedLengthLWE > 0){
             if(receivedLWE == 1){       
-                printf("eParam.leftWheelEncoder == 1\n");
+                uint32_t currentTime = time_us_32();    
                 mParam.left_notch++;
                 // Calculate time between consecutive pulses for the left wheel
                 uint32_t timeDifference = currentTime - mParam.lastLeftEdgeTime;
@@ -248,12 +247,14 @@ void motor_control(){
                 // Update the distance traveled for the left wheel
                 mParam.distanceLeft += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
                 eParam.leftWheelEncoder = false;
+                xMessageBufferSend(xMotorLWEdataToWebHandler, (void *) &mParam.speedLeft, sizeof(float), 0);
+                printf("eParam.leftWheelEncoder:%.2f",mParam.speedLeft);
             }
         }
         receivedLengthRWE = xMessageBufferReceive(xMotorRightEncoderHandler, &receivedRWE, sizeof(int), 0);
         if(receivedLengthRWE > 0){
-            if(receivedRWE == 1){            
-                printf("eParam.rightWheelEncoder ==1\n");
+            if(receivedRWE == 1){       
+                uint32_t currentTime = time_us_32();                         
                 mParam.right_notch++;
                 // Calculate time between consecutive pulses for the right wheel
                 uint32_t timeDifference = currentTime - mParam.lastRightEdgeTime;
@@ -265,17 +266,27 @@ void motor_control(){
                 // Update the distance traveled for the right wheel
                 mParam.distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
                 eParam.rightWheelEncoder = false;
+                xMessageBufferSend(xMotorLWEdataToWebHandler, (void *) &mParam.speedRight, sizeof(float), 0);
+                printf("eParam.leftWheelEncoder:%.2f",mParam.speedRight);
             }   
         }                
         
-        vTaskDelay(1000);
+        vTaskDelay(100);
     }
 }
 void vLaunch( void) {        
     //Create the message buffers with their sizes
     xMotorStateHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    //Get the buffer data from motor.c to main.c
     xMotorLeftEncoderHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
     xMotorRightEncoderHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    //send the LWE and RWE data to webserver
+    xMotorLWEdataToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+    xMotorRWEdataToWebHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+
+    //Send data from CGI to SSI to check states
+    xMotorSSIHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+
     xMotorStateHandlerMutex = xSemaphoreCreateMutex();
 
     TaskHandle_t wifi_task_handle;    

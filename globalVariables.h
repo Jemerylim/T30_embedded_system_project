@@ -14,6 +14,8 @@ static MessageBufferHandle_t xMotorStateHandler;
 static SemaphoreHandle_t xMotorStateHandlerMutex;
 static MessageBufferHandle_t xMotorLeftEncoderHandler;
 static MessageBufferHandle_t xMotorRightEncoderHandler;
+static MessageBufferHandle_t xMotorLWEdataToWebHandler;
+static MessageBufferHandle_t xMotorRWEdataToWebHandler;
 
 /*******IR Line Buffers*****/
 static MessageBufferHandle_t xIRStateHandler;
@@ -22,4 +24,5 @@ static MessageBufferHandle_t xIRStateHandler;
 
 /*******Ultrasonic Line Buffers*****/
 
-
+/*******Webserver Buffers*****/
+static MessageBufferHandle_t xMotorSSIHandler;

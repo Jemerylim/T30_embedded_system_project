@@ -17,9 +17,9 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
       break;
     case 1: // temp
       {
-      const float voltage = adc_read() * 3.3f / (1 << 12);
-      const float tempC = 27.0f - (voltage - 0.706f) / 0.001721f;
-      printed = snprintf(pcInsert, iInsertLen, "%f", tempC);
+        const float voltage = adc_read() * 3.3f / (1 << 12);
+        const float tempC = 27.0f - (voltage - 0.706f) / 0.001721f;
+        printed = snprintf(pcInsert, iInsertLen, "%f", tempC);
       }
       break;
     case 2: // led
@@ -35,30 +35,68 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
       break;
     case 3: //motor
       {
-        bool motor_left_forward = gpio_get(2); // motor left forward
-        bool motor_left_backward = gpio_get(3); // motor left backward
-        bool motor_right_backward = gpio_get(4);// motor right backward 
-        bool motor_right_forward = gpio_get(5); // motot right forward
-        if((motor_left_forward == 0) && (motor_left_backward == 0) && 
-        (motor_right_backward == 0) && (motor_right_forward == 0)) {          
-          printed = snprintf(pcInsert, iInsertLen, "Stopped");
-        }
-        else if((motor_left_forward == 1) || (motor_left_backward == 1) || 
-        (motor_right_backward == 1) || (motor_right_forward == 1)){
-          printed = snprintf(pcInsert, iInsertLen, "Running");
-        }
+        int receivedStatus;
+        size_t receivedLength;
+        receivedLength = xMessageBufferReceive(xMotorSSIHandler, &receivedStatus, sizeof(int), 0);
 
-        printf("GPIO 2: %d\n GPIO 3: %d\n GPIO 4: %d\n GPIO 5: %d\n", gpio_get(2), gpio_get(3),gpio_get(4),gpio_get(5));        
+        // if(receivedLength > 0){
+          // if(receivedStatus == 1){
+            bool motor_left_forward = gpio_get(2); // motor left forward
+            bool motor_left_backward = gpio_get(3); // motor left backward
+            bool motor_right_backward = gpio_get(4);// motor right backward 
+            bool motor_right_forward = gpio_get(5); // motot right forward
+            if((motor_left_forward == 0) && (motor_left_backward == 0) && 
+            (motor_right_backward == 0) && (motor_right_forward == 0)) {          
+              printed = snprintf(pcInsert, iInsertLen, "Stopped");
+            }
+            else if((motor_left_forward == 1) || (motor_left_backward == 1) || 
+            (motor_right_backward == 1) || (motor_right_forward == 1)){
+              printed = snprintf(pcInsert, iInsertLen, "Running");
+            }
+
+            printf("GPIO 2: %d\n GPIO 3: %d\n GPIO 4: %d\n GPIO 5: %d\n", gpio_get(2), gpio_get(3),gpio_get(4),gpio_get(5));
+          // }          
+          // else{
+          //   printed = snprintf(pcInsert, iInsertLen, "Stopped");
+          // }
+        // }
+        
+                
       }    
       break;
       case 4: //lspeed
       {
-        printed = snprintf(pcInsert, iInsertLen, "lspeed");
+        static float previousLWEdata = 0;  // Static variable to store the previous value
+        float receivedLWEdata;
+        size_t receivedLength;
+        
+        receivedLength = xMessageBufferReceive(xMotorLWEdataToWebHandler, &receivedLWEdata, sizeof(float), 0);
+        
+        if (receivedLength > 0) {
+            // New data received, update both the display and the previous value
+            printed = snprintf(pcInsert, iInsertLen, "%.2f", receivedLWEdata);
+            previousLWEdata = receivedLWEdata;
+        } else {
+            // No new data, use the previous value
+            printed = snprintf(pcInsert, iInsertLen, "%.2f", previousLWEdata);
+        }
       }
       break;
       case 5: //rspeed
       {
-        printed = snprintf(pcInsert, iInsertLen, "rspeed");
+        static float previousRWEdata = 0;  // Static variable to store the previous value
+        float receivedRWEdata;
+        size_t receivedLength;
+
+        receivedLength = xMessageBufferReceive(xMotorRWEdataToWebHandler, &receivedRWEdata, sizeof(float), 0); 
+        if(receivedLength > 0){
+          // New data received, update both the display and the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%.2f", receivedRWEdata);
+          previousRWEdata = receivedRWEdata;
+        } else {
+          //no new data, use the previous value
+          printed = snprintf(pcInsert, iInsertLen, "%.2f", previousRWEdata);
+        }             
       }
       break;
       case 6: //ldist
