@@ -27,6 +27,11 @@ static MessageBufferHandle_t xBarcodeCharHandler;
 
 /*******Ultrasonic Line Buffers*****/
 static MessageBufferHandle_t xControlMessageBufferUltra;
+extern volatile uint64_t start_time_us;
+extern volatile uint64_t end_time_us;
+extern volatile bool echo_received;
 
 /*******Webserver Buffers*****/
 static MessageBufferHandle_t xMotorSSIHandler;
+
+

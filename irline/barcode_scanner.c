@@ -6,11 +6,14 @@
 #include <unistd.h>
 #include "pico/time.h"
 #include <string.h>
+#include "globalVariables.h"
 
+#define ECHO_PIN 11
 #define BARCODE_SENSOR 20
 #define ARRAY_SIZE 10
 #define DICTIONARY_SIZE 30
 #define DEBOUNCE 100
+
 
 struct bar{
     uint16_t voltage;
@@ -249,6 +252,12 @@ void interrupt_callback_barcode(uint gpio, uint32_t events) {
         printf("Data to send at handler %d\n", dataToSend);
     }        
 
+    if (gpio == ECHO_PIN && events == GPIO_IRQ_EDGE_RISE) {  // Rising edge
+        start_time_us = to_us_since_boot(get_absolute_time());        
+    } else if(gpio == ECHO_PIN && events == GPIO_IRQ_EDGE_FALL){  // Falling edge
+        end_time_us = to_us_since_boot(get_absolute_time());
+        echo_received = true;
+    }
 }
 
 // int main() {

@@ -33,6 +33,7 @@
         "cyw43_arch.h": "c",
         "semphr.h": "c",
         "globalvariables.h": "c",
-        "gpio.h": "c"
+        "gpio.h": "c",
+        "message_buffer.h": "c"
     }
 }

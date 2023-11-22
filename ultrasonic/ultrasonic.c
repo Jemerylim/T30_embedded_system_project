@@ -21,6 +21,8 @@
 
 #include "motor/motor.h"
 
+#include "globalVariables.h"
+
 #define mbaTASK_MESSAGE_BUFFER_SIZE       ( 60 )
 
 #ifndef PING_ADDR
@@ -38,9 +40,9 @@
 // static MessageBufferHandle_t xControlMessageBufferUltra;
 
 int timeout = 26100;
-volatile uint64_t start_time_us = 0;
-volatile uint64_t end_time_us = 0;
-volatile bool echo_received = false;
+volatile uint64_t start_time_us;
+volatile uint64_t end_time_us;
+volatile bool echo_received;
 
 float x_est = 0; // Estimated state
 float P = 1;    // Estimated error covariance
@@ -48,15 +50,12 @@ float Q = 0.01; // Process noise covariance
 float R = 1;    // Measurement noise covariance
 
 void echo_isr(uint gpio, uint32_t events) {
-    if (gpio == ECHO_PIN && events == GPIO_IRQ_EDGE_RISE) {  // Rising edge
-        start_time_us = to_us_since_boot(get_absolute_time());
-    } else {  // Falling edge
-        end_time_us = to_us_since_boot(get_absolute_time());
-        echo_received = true;
-    }
+    printf("hello i am triggered");
+    
 }
 
 uint64_t getPulse(uint trigPin, uint echoPin) {
+
     // Reset the echo_received flag
     echo_received = false;
 
