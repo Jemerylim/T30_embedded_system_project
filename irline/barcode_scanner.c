@@ -7,7 +7,7 @@
 #include "pico/time.h"
 #include <string.h>
 
-#define BARCODE_SENSOR 7
+#define BARCODE_SENSOR 20
 #define ARRAY_SIZE 10
 #define DICTIONARY_SIZE 30
 #define DEBOUNCE 100
@@ -184,13 +184,14 @@ static void readBarcode(){
 }
 
 void interrupt_callback_barcode(uint gpio, uint32_t events) {
-    uint64_t current = to_ms_since_boot(get_absolute_time());
-    if ((current - interrupttime) < DEBOUNCE)
-    {
-        return;
-    }
-    interrupttime = current;
+    
     if(gpio==BARCODE_SENSOR){
+        uint64_t current = to_ms_since_boot(get_absolute_time());
+        if ((current - interrupttime) < DEBOUNCE)
+        {
+            return;
+        }
+        interrupttime = current;
         adc_select_input(0);
         uint32_t result = adc_read(); //result is a range between 0 - ~2000, above 850 is black
         int index = -1;
@@ -214,6 +215,39 @@ void interrupt_callback_barcode(uint gpio, uint32_t events) {
         }
         
     }
+    // vTaskSuspendAll();    
+    if (gpio == LEFT_WHEEL_ENCODER) 
+    {           
+        uint32_t currentTime = time_us_32();
+        xMessageBufferSend(xMotorEncoderTimerHandler, (void *) &currentTime, sizeof(uint32_t), 0);
+        int dataToSend = 1;
+        //set the left wheel encoder to true and send it using MessageBufferHandle to main.c
+        xMessageBufferSend( /* The message buffer to write to. */
+                    xMotorLeftEncoderHandler,
+                    /* The source of the data to send. */
+                    (void *) &dataToSend,
+                    /* The length of the data to send. */
+                    sizeof( int ),
+                    /* The block time; 0 = no block */
+                    0 );
+        printf("Data to send at handler %d\n", dataToSend);
+    } 
+    else if (gpio == RIGHT_WHEEL_ENCODER)
+    {   
+        uint32_t currentTime = time_us_32();
+        xMessageBufferSend(xMotorEncoderTimerHandler, (void *) &currentTime, sizeof(uint32_t), 0);     
+        int dataToSend = 1;
+        // set the left wheel encoder to true and send it using MessageBufferHandle to main.c
+        xMessageBufferSend( /* The message buffer to write to. */
+                    xMotorRightEncoderHandler,
+                    /* The source of the data to send. */
+                    (void *) &dataToSend,
+                    /* The length of the data to send. */
+                    sizeof( int ),
+                    /* The block time; 0 = no block */
+                    0 );
+        printf("Data to send at handler %d\n", dataToSend);
+    }        
 
 }
 

@@ -145,37 +145,37 @@ void pid_controller(float left_speed, float right_speed, float left_integral, fl
 
 // Interrupt handler for wheel encoders
 void speed_sensor_handler(uint gpio, uint32_t events) {
-    // vTaskSuspendAll();
-    uint32_t currentTime = time_us_32();
-    xMessageBufferSend(xMotorEncoderTimerHandler, (void *) &currentTime, sizeof(uint32_t), 0);
-    if (gpio == LEFT_WHEEL_ENCODER) 
-    {           
-        int dataToSend = 1;
-        //set the left wheel encoder to true and send it using MessageBufferHandle to main.c
-        xMessageBufferSend( /* The message buffer to write to. */
-                    xMotorLeftEncoderHandler,
-                    /* The source of the data to send. */
-                    (void *) &dataToSend,
-                    /* The length of the data to send. */
-                    sizeof( int ),
-                    /* The block time; 0 = no block */
-                    0 );
-        printf("Data to send at handler %d\n", dataToSend);
-    } 
-    else if (gpio == RIGHT_WHEEL_ENCODER)
-    {        
-        int dataToSend = 1;
-        // set the left wheel encoder to true and send it using MessageBufferHandle to main.c
-        xMessageBufferSend( /* The message buffer to write to. */
-                    xMotorRightEncoderHandler,
-                    /* The source of the data to send. */
-                    (void *) &dataToSend,
-                    /* The length of the data to send. */
-                    sizeof( int ),
-                    /* The block time; 0 = no block */
-                    0 );
-        printf("Data to send at handler %d\n", dataToSend);
-    }        
+    // // vTaskSuspendAll();
+    // uint32_t currentTime = time_us_32();
+    // xMessageBufferSend(xMotorEncoderTimerHandler, (void *) &currentTime, sizeof(uint32_t), 0);
+    // if (gpio == LEFT_WHEEL_ENCODER) 
+    // {           
+    //     int dataToSend = 1;
+    //     //set the left wheel encoder to true and send it using MessageBufferHandle to main.c
+    //     xMessageBufferSend( /* The message buffer to write to. */
+    //                 xMotorLeftEncoderHandler,
+    //                 /* The source of the data to send. */
+    //                 (void *) &dataToSend,
+    //                 /* The length of the data to send. */
+    //                 sizeof( int ),
+    //                 /* The block time; 0 = no block */
+    //                 0 );
+    //     printf("Data to send at handler %d\n", dataToSend);
+    // } 
+    // else if (gpio == RIGHT_WHEEL_ENCODER)
+    // {        
+    //     int dataToSend = 1;
+    //     // set the left wheel encoder to true and send it using MessageBufferHandle to main.c
+    //     xMessageBufferSend( /* The message buffer to write to. */
+    //                 xMotorRightEncoderHandler,
+    //                 /* The source of the data to send. */
+    //                 (void *) &dataToSend,
+    //                 /* The length of the data to send. */
+    //                 sizeof( int ),
+    //                 /* The block time; 0 = no block */
+    //                 0 );
+    //     printf("Data to send at handler %d\n", dataToSend);
+    // }        
     // vTaskDelay(1000);
     // gpio_acknowledge_irq(gpio, events);
     // xTaskResumeAll();

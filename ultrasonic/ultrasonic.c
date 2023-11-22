@@ -100,11 +100,12 @@ void setupUltrasonicPins(uint trigPin, uint echoPin)
 
 void ultra_task(__unused void *params) {
     setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
+    
     while(true) {
         uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
         // uint64_t distance_inch = getInch(TRIG_PIN, ECHO_PIN);
 
-        printf("\033[2J\033[H");
+        // printf("\033[2J\033[H");
 
         printf("Distance in cm: %llu\n", distance_cm);
 
@@ -126,7 +127,7 @@ void ultra_task(__unused void *params) {
         //     sizeof( distance_cm ),    /* The length of the data to send. */
         //     0 ); 
 
-        vTaskDelay(1000); // Sleep for 1 second before taking another reading
+        vTaskDelay(101); // Sleep for 1 second before taking another reading
         // vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

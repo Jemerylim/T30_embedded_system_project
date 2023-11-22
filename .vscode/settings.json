@@ -32,6 +32,7 @@
         "ssi.h": "c",
         "cyw43_arch.h": "c",
         "semphr.h": "c",
-        "globalvariables.h": "c"
+        "globalvariables.h": "c",
+        "gpio.h": "c"
     }
 }

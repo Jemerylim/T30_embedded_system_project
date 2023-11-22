@@ -205,10 +205,12 @@ void motor_control(){
     pwm_set_enabled(slice_num_A, true);
     pwm_set_enabled(slice_num_B, true);
 
+    init_barcode_pins();
+    adc_init();
     
     // Enable interrupts on wheel encoder GPIO pins
-    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
-    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &speed_sensor_handler);
+    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);    
     gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
 
     int receivedStatus;
@@ -241,8 +243,7 @@ void motor_control(){
         receivedLengthEncoderT = xMessageBufferReceive(xMotorEncoderTimerHandler, &receivedEncoderTimer, sizeof(uint32_t), 0);
         receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
         if(receivedLengthLWE > 0){            
-            if(receivedLWE == 1){       
-                    
+            if(receivedLWE == 1){                           
                 mParam.left_notch++;
                 // Calculate time between consecutive pulses for the left wheel
                 uint32_t timeDifference = receivedEncoderTimer - mParam.lastLeftEdgeTime;
@@ -288,6 +289,15 @@ void motor_control(){
     }
 }
 
+void barcodeTask(){
+    //init the barcode sensor pins
+    // init_barcode_pins();
+    // adc_init();
+    // gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+    while(true){
+        vTaskDelay(103);
+    }
+}
 void vLaunch( void) {        
     //Create the message buffers with their sizes
     xMotorStateHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
@@ -325,7 +335,10 @@ void vLaunch( void) {
 
     /* Create task for ultrasonic*/
     TaskHandle_t ultratask;
-    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
+    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 4, &ultratask);
+
+    TaskHandle_t barcodeTaskHandle;
+    xTaskCreate(barcodeTask, "barcodeTaskThread", configMINIMAL_STACK_SIZE, NULL, 5, &barcodeTaskHandle);
 
     // Assign task `init_wifi` to core 0    
     vTaskCoreAffinitySet(wifi_task_handle, 1 << 0);
@@ -335,7 +348,8 @@ void vLaunch( void) {
 
     // Run the motor control on core 2
     vTaskCoreAffinitySet(motor_task_handle, 1);
-    vTaskCoreAffinitySet(ultratask, 1);
+    vTaskCoreAffinitySet(ultratask, 1<<0);
+    vTaskCoreAffinitySet(barcodeTaskHandle, 1<<0);
         
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    
     
