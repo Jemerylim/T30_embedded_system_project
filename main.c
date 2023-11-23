@@ -196,22 +196,18 @@ void motor_control(){
     uint slice_num_A = pwm_gpio_to_slice_num(0);
     uint slice_num_B = pwm_gpio_to_slice_num(1);
     pwm_set_clkdiv(slice_num_A, 100); 
-    pwm_set_wrap(slice_num_A, 32150); 
+    pwm_set_wrap(slice_num_A, 62500); 
 
     pwm_set_clkdiv(slice_num_B, 100);
-    pwm_set_wrap(slice_num_B, 32150); 
-    pwm_set_chan_level(slice_num_A, PWM_CHAN_A, 32150); 
-    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, 32150); 
+    pwm_set_wrap(slice_num_B, 62500); 
+    pwm_set_chan_level(slice_num_A, PWM_CHAN_A,62500/4); 
+    pwm_set_chan_level(slice_num_B, PWM_CHAN_B, 62500/4); 
     pwm_set_enabled(slice_num_A, true);
-    pwm_set_enabled(slice_num_B, true);
-
-    init_barcode_pins();
-    adc_init();
+    pwm_set_enabled(slice_num_B, true);    
     
     // Enable interrupts on wheel encoder GPIO pins
-    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
-    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);    
-    gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+    // gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+    // gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);        
 
     int receivedStatus;
     size_t receivedLength;
@@ -234,70 +230,70 @@ void motor_control(){
                 move_forward();
                 // pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
             }            
-            else {
+            else if(receivedStatus==0){
                 stop_movement();                
             }            
         }
         
 
-        receivedLengthEncoderT = xMessageBufferReceive(xMotorEncoderTimerHandler, &receivedEncoderTimer, sizeof(uint32_t), 0);
-        receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
-        if(receivedLengthLWE > 0){            
-            if(receivedLWE == 1){                           
-                mParam.left_notch++;
-                // Calculate time between consecutive pulses for the left wheel
-                uint32_t timeDifference = receivedEncoderTimer - mParam.lastLeftEdgeTime;
-                mParam.lastLeftEdgeTime = receivedEncoderTimer;
+        // receivedLengthEncoderT = xMessageBufferReceive(xMotorEncoderTimerHandler, &receivedEncoderTimer, sizeof(uint32_t), 0);
+        // receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
+        // if(receivedLengthLWE > 0){            
+        //     if(receivedLWE == 1){                           
+        //         mParam.left_notch++;
+        //         // Calculate time between consecutive pulses for the left wheel
+        //         uint32_t timeDifference = receivedEncoderTimer - mParam.lastLeftEdgeTime;
+        //         mParam.lastLeftEdgeTime = receivedEncoderTimer;
 
-                // Calculate speed for the left wheel (cm/s)
-                mParam.speedLeft = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
+        //         // Calculate speed for the left wheel (cm/s)
+        //         mParam.speedLeft = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
 
-                // Update the distance traveled for the left wheel
-                mParam.distanceLeft += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
-                eParam.leftWheelEncoder = false;
-                xMessageBufferSend(xMotorLWEdataToWebHandler, (void *) &mParam.speedLeft, sizeof(float), 0);
-                xMessageBufferSend(xMotorLDistToWebHandler, (void *) &mParam.distanceLeft, sizeof(float), 0);
-                printf("eParam.leftWheelEncoder:%.2f",mParam.distanceLeft);
-            }
-        }
-        receivedLengthRWE = xMessageBufferReceive(xMotorRightEncoderHandler, &receivedRWE, sizeof(int), 0);
-        if(receivedLengthRWE > 0){
+        //         // Update the distance traveled for the left wheel
+        //         mParam.distanceLeft += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
+        //         eParam.leftWheelEncoder = false;
+        //         xMessageBufferSend(xMotorLWEdataToWebHandler, (void *) &mParam.speedLeft, sizeof(float), 0);
+        //         xMessageBufferSend(xMotorLDistToWebHandler, (void *) &mParam.distanceLeft, sizeof(float), 0);
+        //         printf("eParam.leftWheelEncoder:%.2f",mParam.distanceLeft);
+        //     }
+        // }
+        // receivedLengthRWE = xMessageBufferReceive(xMotorRightEncoderHandler, &receivedRWE, sizeof(int), 0);
+        // if(receivedLengthRWE > 0){
             
-            if(receivedRWE == 1){                                                
-                mParam.right_notch++;
-                // Calculate time between consecutive pulses for the right wheel
-                uint32_t timeDifference = receivedEncoderTimer - mParam.lastRightEdgeTime;
-                mParam.lastRightEdgeTime = receivedEncoderTimer;
+        //     if(receivedRWE == 1){                                                
+        //         mParam.right_notch++;
+        //         // Calculate time between consecutive pulses for the right wheel
+        //         uint32_t timeDifference = receivedEncoderTimer - mParam.lastRightEdgeTime;
+        //         mParam.lastRightEdgeTime = receivedEncoderTimer;
 
-                // Calculate speed for the right wheel (cm/s)
-                mParam.speedRight = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
+        //         // Calculate speed for the right wheel (cm/s)
+        //         mParam.speedRight = WHEEL_CIRCUMFERENCE_CM / (timeDifference / 100000.0); // Convert timeDifference to seconds
 
-                // Update the distance traveled for the right wheel
-                mParam.distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
-                eParam.rightWheelEncoder = false;
-                xMessageBufferSend(xMotorRWEdataToWebHandler, (void *) &mParam.speedRight, sizeof(float), 0);
-                xMessageBufferSend(xMotorRDistToWebHandler, (void *) &mParam.distanceRight, sizeof(float), 0);
-                printf("mParam.rightWheelEncoder:%.2f",mParam.distanceRight);
-            }   
-        }
+        //         // Update the distance traveled for the right wheel
+        //         mParam.distanceRight += WHEEL_CIRCUMFERENCE_CM/HOLES_ON_DISC;
+        //         eParam.rightWheelEncoder = false;
+        //         xMessageBufferSend(xMotorRWEdataToWebHandler, (void *) &mParam.speedRight, sizeof(float), 0);
+        //         xMessageBufferSend(xMotorRDistToWebHandler, (void *) &mParam.distanceRight, sizeof(float), 0);
+        //         printf("mParam.rightWheelEncoder:%.2f",mParam.distanceRight);
+        //     }   
+        // }
 
-        if(receivedLengthRWE || receivedLengthLWE){
-            pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
-        }                
+        // if(receivedLengthRWE || receivedLengthLWE){
+        //     pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
+        // }                
         
         vTaskDelay(100);
     }
 }
 
-void barcodeTask(){
-    //init the barcode sensor pins
-    // init_barcode_pins();
-    // adc_init();
-    // gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
-    while(true){
-        vTaskDelay(103);
-    }
-}
+// void barcodeTask(){
+//     //init the barcode sensor pins
+//     // init_barcode_pins();
+//     // adc_init();
+//     // gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+//     while(true){
+//         vTaskDelay(103);
+//     }
+// }
 void vLaunch( void) {        
     //Create the message buffers with their sizes
     xMotorStateHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
@@ -334,8 +330,8 @@ void vLaunch( void) {
     xTaskCreate( motor_control, "motorThread", configMINIMAL_STACK_SIZE, NULL, 3, &( motor_task_handle ) );
 
     /* Create task for ultrasonic*/
-    TaskHandle_t ultratask;
-    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 4, &ultratask);
+    // TaskHandle_t ultratask;
+    // xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 4, &ultratask);
 
     TaskHandle_t barcodeTaskHandle;
     xTaskCreate(barcodeTask, "barcodeTaskThread", configMINIMAL_STACK_SIZE, NULL, 5, &barcodeTaskHandle);
@@ -348,7 +344,7 @@ void vLaunch( void) {
 
     // Run the motor control on core 2
     vTaskCoreAffinitySet(motor_task_handle, 1);
-    vTaskCoreAffinitySet(ultratask, 1<<0);
+    // vTaskCoreAffinitySet(ultratask, 1<<0);
     vTaskCoreAffinitySet(barcodeTaskHandle, 1);
         
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    

@@ -137,7 +137,7 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
       case 8: //barcode
       {
         static char previousDecoded[11];  // Static variable to store the previous value
-        char receivedChar[11];
+        char receivedChar[2];
         size_t receivedLength;
 
         // receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*11, 0); 
@@ -152,7 +152,7 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
         //   printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
         // }
         
-        receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*11, 0); 
+        receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*2, 0); 
         if (receivedLength > 0) {
             // New data received, update both the display and the previous value
             int validCharCount = 0;
@@ -182,7 +182,7 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
       break;
       case 9: //ultra
       {
-        printed = snprintf(pcInsert, iInsertLen, "ultras");
+        printed = snprintf(pcInsert, iInsertLen, "%d",globalindex);
       }
       break;
       case 10: //magno

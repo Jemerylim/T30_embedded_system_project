@@ -9,12 +9,13 @@
 #include "globalVariables.h"
 
 #define ECHO_PIN 11
-#define BARCODE_SENSOR 20
-#define ARRAY_SIZE 10
+#define BARCODE_SENSOR 7
+#define ARRAY_SIZE 9
 #define DICTIONARY_SIZE 30
-#define DEBOUNCE 100
+#define DEBOUNCE 20     
+#define INTERVAL_US 1500000
 
-
+int globalindex =0;
 struct bar{
     uint16_t voltage;
     absolute_time_t bar_start;
@@ -63,7 +64,15 @@ int barcode[3][9];
 char decodedBarcode[3];
 volatile uint64_t interrupttime = 0;
 int barcodeIndex = 0;
+volatile bool timer_triggered = false;
+int currentIndex = 0;
 
+int64_t alarm_callback(alarm_id_t id, void *user_data) {
+    printf("Timer %d fired!\n", (int) id);
+    timer_triggered = true;
+    // Can return a value here in us to fire in the future
+    return 0;
+}
 
 /*
 thickness classification
@@ -98,6 +107,11 @@ static int handleBars(uint32_t result, int index){
                 barList[index].color = 0;
                 barList[index].bar_start = current_time;
                 printf("Bar %d - Voltage: %d, Color: %s, Start: %llu, len:  %llu\n" , index-1, barList[index-1].voltage, barList[index-1].color == 1 ? "Black" : "White", barList[index-1].bar_start, barList[index-1].barLength); 
+                if(index < 8){
+                    // Start the 1.5-second timer for deadend detection and reset if invalid
+                    /*currentIndex = index;
+                    add_alarm_in_ms(1500, alarm_callback, NULL, false);*/
+                }
                 return 0;
             }else{
                 //black
@@ -117,11 +131,11 @@ static int handleBars(uint32_t result, int index){
 
 static void classifyThickness(int barcodeIndex){
     int total = 0;
-    for (int i = 0; i < 10; i++) { // 2 black one white
+    for (int i = 0; i < 9; i++) { // 2 black one white
             total+=barList[i].barLength;
         }
     float average = total/9;   
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 9; i++) {
         if (barList[i].barLength >= average)//thick
         {
             if(barList[i].color == 1){//black
@@ -138,36 +152,75 @@ static void classifyThickness(int barcodeIndex){
         } 
     }
 }
+
+void reverseString(const char *str, char *result) {
+    int length = strlen(str);
+
+    // Copy the original string to the result buffer
+    strcpy(result, str);
+
+    int start = 0;
+    int end = length - 1;
+
+    while (start < end) {
+        char temp = result[start];
+        result[start] = result[end];
+        result[end] = temp;
+        start++;
+        end--;
+    }
+}
+
 static int decodeBarCode(int barcodeIndex){
     classifyThickness(barcodeIndex);// get thickness
     char fullbarcode[10];
     int legit = 0;
-    for (int i = 0; i < 9; i++) {
-        printf("%d",barcode[barcodeIndex][i]);//print full list of bar thickness
-    }
+    // for (int i = 0; i < 9; i++) {
+    //     printf("%d",barcode[barcodeIndex][i]);//print full list of bar thickness
+    // }
     for (int i = 0; i < 9; i++) {
         char temp;
         temp = (char)(barcode[barcodeIndex][i]+48); //convert int to char
         printf("%c\n", temp); 
         fullbarcode[i] = temp; 
     }
-    fullbarcode[9]='\0';
     printf("%s\n",fullbarcode);
-    for (int i = 0; i < 28; i++) {
-        if (strcmp(dictionary[i].value, fullbarcode) == 0) { //compare value in dictionary to full converted barcode 
-            printf("Match found for key %c\n", dictionary[i].key);
+    fullbarcode[9]='\0';
+    char reverseStrings[ARRAY_SIZE];
+    reverseString(fullbarcode, reverseStrings);
+    printf("%s\n",reverseStrings);
+    reverseStrings[9]='\0';
+    for (int x = 0; x < 27; x++) {
+        //printf("%s\n",dictionary[x].value);
+        char *substring = malloc(ARRAY_SIZE +1 );
+        strncpy(substring, dictionary[x].value, ARRAY_SIZE);        
+        substring[ARRAY_SIZE] = '\0';
+        // char*reverseString = malloc(ARRAY_SIZE +1);
+       // char *reversedString = reverseString(fullbarcode);
+        
+        //printf("Substring: %s\n", substring);
+        if (strcmp(substring, reverseStrings) == 0) { //compare value in dictionary to full converted barcode 
+            printf("Match found for key %c\n", dictionary[x].key);
             legit = 1;
-            decodedBarcode[barcodeIndex] =dictionary[i].key;
-            printf("DecodedBarcode: %c\n", decodedBarcode[barcodeIndex]);
-            xMessageBufferSend(xBarcodeCharHandler, (void*) &decodedBarcode[barcodeIndex], sizeof(decodeBarCode), 0);
+            decodedBarcode[barcodeIndex] =dictionary[x].key;
+            if(decodedBarcode[barcodeIndex] != '*'){
+                // Clear the message buffer
+                xMessageBufferReset(xBarcodeCharHandler);
+                xMessageBufferSend(xBarcodeCharHandler, (void*) &decodedBarcode[barcodeIndex], sizeof(decodeBarCode), 0);
+            }
+            printf("Barcode says %c",decodedBarcode[barcodeIndex]);
+            printf("Barcode is valid\n");                                    
             break;
         }
-    }
+        free(substring);
+    }    
     if(legit==0){
-        char notValid[11];
+        char notValid[2];
         // Copy the string "Not Valid" into the notValid array
-        strcpy(notValid, "Not Valid");  
+        strcpy(notValid, "-");  
         printf("Not valid:%s\n", notValid);
+        // Clear the message buffer
+        xMessageBufferReset(xBarcodeCharHandler);
         xMessageBufferSend(xBarcodeCharHandler, (void*) &notValid, sizeof(notValid), 0);
         return 0;
     }else{
@@ -186,35 +239,40 @@ static void readBarcode(){
     }
 }
 
-void interrupt_callback_barcode(uint gpio, uint32_t events) {
-    
-    if(gpio==BARCODE_SENSOR){
+void interrupt_callback_barcode(uint gpio, uint32_t events) {    
+    printf("enter IR interrupt \n");
         uint64_t current = to_ms_since_boot(get_absolute_time());
         if ((current - interrupttime) < DEBOUNCE)
         {
+            printf("debounce\n");
             return;
         }
         interrupttime = current;
+    if(gpio==BARCODE_SENSOR &&(events == GPIO_IRQ_EDGE_RISE || events == GPIO_IRQ_EDGE_FALL)){
+        
         adc_select_input(0);
         uint32_t result = adc_read(); //result is a range between 0 - ~2000, above 850 is black
-        int index = -1;
+        globalindex = -1;
         for (int i = 0; i < ARRAY_SIZE; i++) {
             if (barList[i].voltage==0)
             {
-                index = i;
+                globalindex = i;
                 break;
             }        
         }
-        if(index == -1 ){
+        if(globalindex == -1 ){
             //all 9 slots are full
             if(decodeBarCode(barcodeIndex)==1){
                 barcodeIndex+=1;
+            }
+            if(barcodeIndex == 3){
+                readBarcode();
             }
             for (int i = 0; i < ARRAY_SIZE; i++) {
                 barList[i].voltage = 0;
             }
         }else{
-            handleBars(result,index);
+            handleBars(result,globalindex);
         }
         
     }
@@ -260,6 +318,27 @@ void interrupt_callback_barcode(uint gpio, uint32_t events) {
     }
 }
 
+void barcodeTask(){
+    init_barcode_pins();
+    adc_init();
+    gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &interrupt_callback_barcode);
+    while(1){
+        if (timer_triggered) {
+            if (barList[2].voltage == 0) {
+                // wall
+                barList[0].voltage == 0;
+                barList[0].barLength == 0;
+                barList[1].voltage == 0;
+                //turn
+                printf("deadend!\n");
+            }
+            // Reset the flag
+            timer_triggered = false;
+        }
+        tight_loop_contents();
+        vTaskDelay(103);
+    }
+}
 // int main() {
 //     stdio_usb_init();
 //     init_pins();

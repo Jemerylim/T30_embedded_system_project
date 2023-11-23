@@ -34,6 +34,16 @@
         "semphr.h": "c",
         "globalvariables.h": "c",
         "gpio.h": "c",
-        "message_buffer.h": "c"
+        "message_buffer.h": "c",
+        "functional": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "array": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }

@@ -9,7 +9,7 @@
 
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
-#include "hardware/adc.h"
+#include "hardware/adc.h"   
 #include "hardware/gpio.h"
 #include <stdio.h>
 #include "magnometer/mag.h"

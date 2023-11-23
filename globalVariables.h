@@ -34,4 +34,5 @@ extern volatile bool echo_received;
 /*******Webserver Buffers*****/
 static MessageBufferHandle_t xMotorSSIHandler;
 
+extern int globalindex;
 
