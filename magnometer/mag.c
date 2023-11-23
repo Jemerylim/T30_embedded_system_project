@@ -59,18 +59,18 @@
  
 
 
-#ifdef i2c0
+#ifdef i2c1
 
 void write_byte(uint8_t address, uint8_t reg, uint8_t value) {
     uint8_t data[2] = {reg, value};
-    i2c_write_blocking(i2c0, address, data, 2, false);
+    i2c_write_blocking(i2c1, address, data, 2, false);
 }
 
 uint8_t read_byte(uint8_t address, uint8_t reg) {
     uint8_t result;
     reg |= (1 << 7);
-    i2c_write_blocking(i2c0, address, &reg, 1, true);
-    i2c_read_blocking(i2c0, address, &result, 1, false);
+    i2c_write_blocking(i2c1, address, &reg, 1, true);
+    i2c_read_blocking(i2c1, address, &result, 1, false);
     return result;
 }
 
@@ -131,35 +131,24 @@ float calculate_heading(int16_t Hx, int16_t Hy) {
 #endif
 
 float measurement() {
-    stdio_init_all();
-    i2c_init(i2c0, 100 * 1000);
-    gpio_set_function(0, GPIO_FUNC_I2C);
-    gpio_set_function(1, GPIO_FUNC_I2C);
-    gpio_pull_up(0);
-    gpio_pull_up(1);
+    i2c_init(i2c1, 100 * 1000);
+    gpio_set_function(14, GPIO_FUNC_I2C);
+    gpio_set_function(15, GPIO_FUNC_I2C);
+    gpio_pull_up(14);
+    gpio_pull_up(15);
     initialize_lsm303();
 
-    while (1) {
-        int16_t Hx = read_data(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_X_H_M, LSM303_REGISTER_MAG_OUT_X_L_M);
-        int16_t Hy = read_data(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_Y_H_M, LSM303_REGISTER_MAG_OUT_Y_L_M);
-        int16_t Hz = read_data(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_Z_H_M, LSM303_REGISTER_MAG_OUT_Z_L_M);
-        int16_t Ax = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_X_H_A, LSM303_REGISTER_ACCEL_OUT_X_L_A);
-        int16_t Ay = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_Y_H_A, LSM303_REGISTER_ACCEL_OUT_Y_L_A);
-        int16_t Az = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_Z_H_A, LSM303_REGISTER_ACCEL_OUT_Z_L_A);
-        printf("\nLSM303DLHC Raw Data \nMagnetometer output: \nHx: %d", Hx);
-        printf("\nHy: %d", Hy);
-        printf("\nHz: %d", Hz);
-        printf("\nAccelerometer output: \nAx: %d", Ax);
-        printf("\nAy: %d", Ay);
-        printf("\nAz: %d", Az);
-        float pitch = getPitch(Ax, Ay, Az);
-        float roll = getRoll(Ax, Az);
-        float yaw = getYaw(Hx, Hy, Hz, pitch, roll);
-        float heading = calculate_heading(Hx, Hy);
-        printf("\nLSM303DLHC Compass Heading: %.2f degrees", heading); //Look at this for direction
-        printf("\nPitch: %.2f, Roll: %.2f, Yaw (Heading): %.2f\n", pitch * 180.0 / M_PI, roll * 180.0 / M_PI, yaw * 180.0 / M_PI); 
-        sleep_ms(2000); // Sleep for 2 seconds
-    }
-
-    return 0;
+    
+    int16_t Hx = read_data(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_X_H_M, LSM303_REGISTER_MAG_OUT_X_L_M);
+    int16_t Hy = read_data(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_Y_H_M, LSM303_REGISTER_MAG_OUT_Y_L_M);
+    int16_t Hz = read_data(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_Z_H_M, LSM303_REGISTER_MAG_OUT_Z_L_M);
+    int16_t Ax = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_X_H_A, LSM303_REGISTER_ACCEL_OUT_X_L_A);
+    int16_t Ay = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_Y_H_A, LSM303_REGISTER_ACCEL_OUT_Y_L_A);
+    int16_t Az = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_Z_H_A, LSM303_REGISTER_ACCEL_OUT_Z_L_A);
+    float pitch = getPitch(Ax, Ay, Az);
+    float roll = getRoll(Ax, Az);
+    float yaw = getYaw(Hx, Hy, Hz, pitch, roll);
+    float heading = calculate_heading(Hx, Hy);
+    // Return the heading value
+    return heading;
 }
