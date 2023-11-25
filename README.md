@@ -5,11 +5,13 @@
 
 
 **Flow Chart:**
-![image](https://github.com/Jemerylim/T30_embedded_system_project/assets/93836861/9c123b40-cff2-43ba-a5e4-1d3bf7fd92ca)
+
+![Flow Chart](https://github.com/Jemerylim/T30_embedded_system_project/assets/39162639/f943e564-a00a-49c8-9118-b1b1a1d66b76)
 
 
 **Data Flow Diagram:**
-![image](https://github.com/Jemerylim/T30_embedded_system_project/assets/93836861/139aa907-5cd9-44a5-928b-5ade36dd6125)
+
+![Data Flow Diagram](https://github.com/Jemerylim/T30_embedded_system_project/assets/39162639/706cca28-41fb-43d1-98d5-01a28336cc37)
 
 
 
