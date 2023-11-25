@@ -10,7 +10,8 @@
 
 
 **Data Flow Diagram:**
-![image](https://github.com/Jemerylim/T30_embedded_system_project/assets/93836861/139aa907-5cd9-44a5-928b-5ade36dd6125)
+
+![Data Flow Diagram](https://github.com/Jemerylim/T30_embedded_system_project/assets/39162639/706cca28-41fb-43d1-98d5-01a28336cc37)
 
 
 
