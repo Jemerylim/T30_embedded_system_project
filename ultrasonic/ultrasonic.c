@@ -37,25 +37,23 @@
 #define TRIG_PIN 10
 #define ECHO_PIN 11
 
-// static MessageBufferHandle_t xControlMessageBufferUltra;
-
-int timeout = 26100;
-volatile uint64_t start_time_us;
-volatile uint64_t end_time_us;
-volatile bool echo_received;
+int timeout = 26100; // Timeout for ultrasonic sensor
+volatile uint64_t start_time_us; // Start time for echo pulse
+volatile uint64_t end_time_us; // End time for echo pulse
+volatile bool echo_received; // Flag indicating if echo pulse is received
 
 float x_est = 0; // Estimated state
 float P = 1;    // Estimated error covariance
 float Q = 0.01; // Process noise covariance
 float R = 1;    // Measurement noise covariance
 
+// Interrupt service routine for handling echo pulse
 void echo_isr(uint gpio, uint32_t events) {
     printf("hello i am triggered");
-    
 }
 
+// Function to get the duration of the pulse from the ultrasonic sensor
 uint64_t getPulse(uint trigPin, uint echoPin) {
-
     // Reset the echo_received flag
     echo_received = false;
 
@@ -63,9 +61,6 @@ uint64_t getPulse(uint trigPin, uint echoPin) {
     gpio_put(trigPin, 1);
     sleep_us(10);
     gpio_put(trigPin, 0);
-
-    //need to change this
-    //set alarm
 
     // Wait for the echo_isr to signal echo received
     uint64_t wait_start = to_us_since_boot(get_absolute_time());
@@ -82,14 +77,14 @@ uint64_t getPulse(uint trigPin, uint echoPin) {
     return 0;
 }
 
-uint64_t getCm(uint trigPin, uint echoPin)
-{
+// Function to convert pulse duration to distance in centimeters
+uint64_t getCm(uint trigPin, uint echoPin) {
     uint64_t pulseLength = getPulse(trigPin, echoPin);
     return pulseLength / 29 / 2;
 }
 
-void setupUltrasonicPins(uint trigPin, uint echoPin)
-{
+// Function to set up GPIO pins for the ultrasonic sensor
+void setupUltrasonicPins(uint trigPin, uint echoPin) {
     gpio_init(trigPin);
     gpio_init(echoPin);
     gpio_set_dir(trigPin, GPIO_OUT);
@@ -97,106 +92,23 @@ void setupUltrasonicPins(uint trigPin, uint echoPin)
     gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &echo_isr);
 }
 
+// Task for continuously measuring distance with the ultrasonic sensor
 void ultra_task(__unused void *params) {
     setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
-    
+
     while(true) {
         uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
-        // uint64_t distance_inch = getInch(TRIG_PIN, ECHO_PIN);
-
-        // printf("\033[2J\033[H");
 
         printf("Distance in cm: %llu\n", distance_cm);
 
-        if (distance_cm <= 10.0)
-        {
+        if (distance_cm <= 10.0) {
             printf("Obstacle within 10cm\n");
             move_backward();
-        }
-        else
-        {
+        } else {
             move_forward();
-            printf("No obstacle with 10cm\n");
+            printf("No obstacle within 10cm\n");
         }
-        // printf("Distance in inches: %llu\n", distance_inch);
-
-        // xMessageBufferSend( 
-        //     xControlMessageBufferUltra,    /* The message buffer to write to. */
-        //     (void *) &distance_cm,    /* The source of the data to send. */
-        //     sizeof( distance_cm ),    /* The length of the data to send. */
-        //     0 ); 
 
         vTaskDelay(101); // Sleep for 1 second before taking another reading
-        // vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
-
-// void ultra_check_task(__unused void *params) {
-//     size_t xReceivedBytesUltra;
-//     uint64_t fReceivedDataUltra;
-//     while(true) {
-//         xReceivedBytesUltra = xMessageBufferReceive(xControlMessageBufferUltra, (void *)&fReceivedDataUltra, sizeof(fReceivedDataUltra), portMAX_DELAY);
-        
-//         if (xReceivedBytesUltra == sizeof(fReceivedDataUltra))
-//         {
-//              // Convert the uint64_t measurement to a float
-//             float measurement = (float)fReceivedDataUltra;
-
-//             // Kalman Filter update
-//             float y = measurement - x_est;  // Calculate the innovation
-//             float S = P + R;                       // Estimate error + measurement error
-//             float K = P / S;                       // Kalman gain
-//             x_est = x_est + K * y;                 // Update the estimate
-//             P = (1 - K) * P + Q;                   // Update the error covariance
-
-//             printf("\033[2J\033[H");
-//             printf("Distance in cm: %.2f\n", x_est);
-//             printf("Distance in cm(unfiltered): %llu\n", fReceivedDataUltra);
-
-//             if (x_est <= 20.0)
-//             {
-//                 printf("Obstacle within 20cm");
-//             }
-//             else
-//             {
-//                 printf("No obstacle with 20cm");
-//             }
-//         }
-//         else
-//         {
-//             printf("Failed to receive distance data from the message buffer.\n");
-//         }
-
-//         sleep_ms(1000); // Sleep for 1 second before taking another reading
-//         // vTaskDelay(pdMS_TO_TICKS(1000));
-//     }
-// }
-
-
-
-// int main( void )
-// {
-//     stdio_init_all();
-
-//     // setupUltrasonicPins(TRIG_PIN, ECHO_PIN);
-
-//     // TaskHandle_t ultratask;
-//     // xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 3, &ultratask);
-//     // TaskHandle_t ultrachecktask;
-//     // xTaskCreate(ultra_check_task, "ultrachecktaskThread", configMINIMAL_STACK_SIZE, NULL, 2, &ultrachecktask);
-	
-//     // xControlMessageBufferUltra = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
-
-    
-
-//     // while (true)
-//     // {
-//     //     /* code */
-//     //     uint64_t distance_cm = getCm(TRIG_PIN, ECHO_PIN);
-//     //     printf("\033[2J\033[H");
-//     //     printf("Distance in cm: %llu\n", distance_cm);
-//     //     sleep_ms(1000);
-//     // }
-    
-//     vTaskStartScheduler();
-// }
