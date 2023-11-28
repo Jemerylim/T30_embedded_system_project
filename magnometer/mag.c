@@ -4,7 +4,7 @@
 #include "hardware/i2c.h"
 #include "mag.h"
 
-//Write Start bit
+//Define Write Start bit for Accelerometer and Magnetometer
 #define LSM303_ADDRESS_ACCEL 0x19
 #define LSM303_ADDRESS_MAG 0x1E
 
@@ -61,11 +61,13 @@
 
 #ifdef i2c1
 
+//Write a byte to a specific register at given address
 void write_byte(uint8_t address, uint8_t reg, uint8_t value) {
     uint8_t data[2] = {reg, value};
     i2c_write_blocking(i2c1, address, data, 2, false);
 }
 
+// Read a byte from a specific register at given address
 uint8_t read_byte(uint8_t address, uint8_t reg) {
     uint8_t result;
     reg |= (1 << 7);
@@ -74,38 +76,19 @@ uint8_t read_byte(uint8_t address, uint8_t reg) {
     return result;
 }
 
+//Read and convert 16-bit signed integer
 int16_t read_data(uint8_t address, uint8_t reg_high, uint8_t reg_low) {
     uint8_t hi = read_byte(address, reg_high);
     uint8_t lo = read_byte(address, reg_low);
     return (int16_t)((hi << 8) | lo);
 }
 
+//Initialize the LSM303 sensors
 void initialize_lsm303() {
     write_byte(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_CTRL_REG1_A, 0x27);
     //write_byte(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_CTRL_REG4_A, 0x40);
     write_byte(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_CRA_REG_M, 0x14);
     write_byte(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_MR_REG_M, 0x00);
-}
-
-
-float getPitch(int16_t Ax, int16_t Ay, int16_t Az) {
-    return atan2(Ay, sqrt(Ax * Ax + Az * Az));
-}
-
-float getRoll(int16_t Ax, int16_t Az) {
-    return atan2(-Ax, Az);
-}
-
-float getYaw(int16_t Hx, int16_t Hy, int16_t Hz, float pitch, float roll) {
-    float cosRoll = cos(roll);
-    float sinRoll = sin(roll);
-    float cosPitch = cos(pitch);
-    float sinPitch = sin(pitch);
-
-    float Xh = Hx * cosPitch + Hz * sinPitch;
-    float Yh = Hx * sinRoll * sinPitch + Hy * cosRoll - Hz * sinRoll * cosPitch;
-
-    return atan2(Yh, Xh);
 }
 
 float calculate_heading(int16_t Hx, int16_t Hy) {
@@ -145,9 +128,6 @@ float measurement() {
     int16_t Ax = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_X_H_A, LSM303_REGISTER_ACCEL_OUT_X_L_A);
     int16_t Ay = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_Y_H_A, LSM303_REGISTER_ACCEL_OUT_Y_L_A);
     int16_t Az = read_data(LSM303_ADDRESS_ACCEL, LSM303_REGISTER_ACCEL_OUT_Z_H_A, LSM303_REGISTER_ACCEL_OUT_Z_L_A);
-    float pitch = getPitch(Ax, Ay, Az);
-    float roll = getRoll(Ax, Az);
-    float yaw = getYaw(Hx, Hy, Hz, pitch, roll);
     float heading = calculate_heading(Hx, Hy);
     // Return the heading value
     return heading;
