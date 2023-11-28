@@ -227,8 +227,25 @@ void motor_control(){
         //if received data from the webserver/buffer
         if (receivedLength> 0) {
             if(receivedStatus == 1){
-                move_forward();
-                // pid_controller(mParam.speedLeft, mParam.speedRight, left_integral, right_integral, left_last_error, right_last_error);
+                 move_forward();
+                int left_ir_value = gpio_get(LEFT_IR_SENSOR);
+                int right_ir_value = gpio_get(RIGHT_IR_SENSOR);
+
+                if (left_ir_value == 0 && right_ir_value == 1){
+                    float startDeg = measurement();
+                    left_turn_with_angle(90);
+                    pid_controller(mParam.speedLeft, mParam.speedRight,left_integral, right_integral, left_last_error, right_last_error); 
+                }
+                else if (left_ir_value == 1 && right_ir_value == 0){
+                    float startDeg = measurement();
+                    right_turn_with_angle(90);
+                    pid_controller(mParam.speedLeft, mParam.speedRight,left_integral, right_integral, left_last_error, right_last_error); 
+                }
+                else if (left_ir_value == 1 && right_ir_value == 1){
+                    move_forward();
+                    pid_controller(mParam.speedLeft, mParam.speedRight,left_integral, right_integral, left_last_error, right_last_error); 
+
+                }
             }            
             else if(receivedStatus==0){
                 stop_movement();                

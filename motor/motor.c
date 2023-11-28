@@ -85,23 +85,40 @@ void left_turn(){
     gpio_put(MOTOR_RIGHT_BACKWARD,0 );
 
 }
-void right_turn_with_angle( float degree){
-    float start = measurement();    
-    while(start + degree > measurement())
-    {
-        right_turn();  
-    }       
+void right_turn_with_angle(float degree) {
+    float startDeg = measurement();
+    float target = 0;
+    target = startDeg + degree; 
+    printf("start Before while %f\n", startDeg);
+
+    while (target > measurement()) { 
+        startDeg = measurement();  
+        target = (target < 0) ? -target : target;
+        printf("start %f\n", startDeg);
+        printf("target %f\n", target);
+        printf("measurement %f\n", measurement());
+        right_turn(); 
+    }  
     stop_movement();
-        
+    startDeg = 0;
 }
-void left_turn_with_angle(float degree){
-    float start = measurement();    
-    while(start - degree < measurement())
-    {
+
+void left_turn_with_angle(float degree) {
+    float startDeg = measurement();
+    float target = 0;
+    target = startDeg - degree;
+    printf("start Before while %f\n", startDeg);
+
+    while (target < measurement()) {
+        startDeg = measurement();  // Update startDeg within the loop
+        target = (target < 0) ? -target : target;
+        printf("start %f\n", startDeg);
+        printf("target %f\n", target);
+        printf("measurement %f\n", measurement());
         left_turn();
     }  
     stop_movement();
-        
+    startDeg = 0;
 }
 
 void pid_controller(float left_speed, float right_speed, float left_integral, float right_integral, float left_last_error, float right_last_error)
