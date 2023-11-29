@@ -69,15 +69,7 @@ void init_wifi(__unused void *params) {
 
     //Signal that Wi-Fi is ready
     xSemaphoreGive(wifiConnectedSemaphore);
-    while(true) {
-        // printf("TESTING WIFI%s\n",IP_ADDR_ANY);        
-        // ip4_addr_t ip4_address;
-        // IP4_ADDR(&ip4_address, 192, 168, 1, 100); // Example IPv4 address: 192.168.1.100
-        // char ip_str[IP4ADDR_STRLEN_MAX];
-        // ip4addr_ntoa(&ip4_address);
-        // printf("IP address: %s\n", ip_str);
-
-        // not much to do, and we're using RAW (callback) lwIP API
+    while(true) {        
         vTaskDelay(1000);
     }
 
@@ -104,9 +96,7 @@ void init_http_server() {
         printf("CGI Handler initialised\n");
         printf("Test");
         // Perform functions and polling on core 1
-        while (1) {
-            // printf("Testing i am init_http_server_task\n");        
-            // printf("I am running on core:%ld\n", sio_hw->cpuid);
+        while (1) {            
             vTaskDelay(1000);
         }        
     }   
@@ -161,13 +151,10 @@ void motor_control(){
 
     // Variables to track the number of steps and last revolution time for each wheel
     bool left_black = false;
-    bool right_black = false;
-    // float start_degree = 0;
-    // float degree = 0 ;
-    // float start = 0;    
+    bool right_black = false;    
     
     //init all
-    // stdio_init_all();
+    stdio_init_all();
 
     // Initialize GPIO pins for motor control and wheel encoders
     gpio_init(MOTOR_LEFT_FORWARD);
@@ -206,8 +193,8 @@ void motor_control(){
     pwm_set_enabled(slice_num_B, true);    
     
     // Enable interrupts on wheel encoder GPIO pins
-    // gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
-    // gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);        
+    gpio_set_irq_enabled_with_callback(LEFT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+    gpio_set_irq_enabled_with_callback(RIGHT_WHEEL_ENCODER, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);        
 
     int receivedStatus;
     size_t receivedLength;
@@ -219,13 +206,13 @@ void motor_control(){
     size_t receivedLengthEncoderT;
 
     while (1)
-    {  
-        // printf("i am running motor \n");             
+    {                     
         // Receive status message from the message buffer
         receivedLength = xMessageBufferReceive(xMotorStateHandler, &receivedStatus, sizeof(int), 0);        
 
         //if received data from the webserver/buffer
         if (receivedLength> 0) {
+            // if receivedStatus is 1, move forward. pressed "motor on" button on website
             if(receivedStatus == 1){
                  move_forward();
                 int left_ir_value = gpio_get(LEFT_IR_SENSOR);
@@ -253,6 +240,8 @@ void motor_control(){
         }
         
 
+
+        /********Previous controls********/
         // receivedLengthEncoderT = xMessageBufferReceive(xMotorEncoderTimerHandler, &receivedEncoderTimer, sizeof(uint32_t), 0);
         // receivedLengthLWE = xMessageBufferReceive(xMotorLeftEncoderHandler, &receivedLWE, sizeof(int), 0);        
         // if(receivedLengthLWE > 0){            
@@ -302,15 +291,15 @@ void motor_control(){
     }
 }
 
-// void barcodeTask(){
-//     //init the barcode sensor pins
-//     // init_barcode_pins();
-//     // adc_init();
-//     // gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
-//     while(true){
-//         vTaskDelay(103);
-//     }
-// }
+void barcodeTask(){
+    //init the barcode sensor pins
+    init_barcode_pins();
+    adc_init();
+    gpio_set_irq_enabled_with_callback(BARCODE_SENSOR, GPIO_IRQ_EDGE_RISE, true, &interrupt_callback_barcode);
+    while(true){
+        vTaskDelay(103);
+    }
+}
 void vLaunch( void) {        
     //Create the message buffers with their sizes
     xMotorStateHandler = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
@@ -347,9 +336,10 @@ void vLaunch( void) {
     xTaskCreate( motor_control, "motorThread", configMINIMAL_STACK_SIZE, NULL, 3, &( motor_task_handle ) );
 
     /* Create task for ultrasonic*/
-    // TaskHandle_t ultratask;
-    // xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 4, &ultratask);
-
+    TaskHandle_t ultratask;
+    xTaskCreate(ultra_task, "ultrataskThread", configMINIMAL_STACK_SIZE, NULL, 4, &ultratask);
+    
+    /* Create task for barcode*/
     TaskHandle_t barcodeTaskHandle;
     xTaskCreate(barcodeTask, "barcodeTaskThread", configMINIMAL_STACK_SIZE, NULL, 5, &barcodeTaskHandle);
 
@@ -359,9 +349,13 @@ void vLaunch( void) {
     // Assign task `core1_entry` to core 0    
     vTaskCoreAffinitySet(http_task_handle, 1 << 0);
 
-    // Run the motor control on core 2
+    // Run the motor control on core 1
     vTaskCoreAffinitySet(motor_task_handle, 1);
-    // vTaskCoreAffinitySet(ultratask, 1<<0);
+
+    //Run the ultrasonic task on core 0
+    vTaskCoreAffinitySet(ultratask, 1<<0);
+
+    //Run the barcode task on core 1
     vTaskCoreAffinitySet(barcodeTaskHandle, 1);
         
     // vTaskGetInfo(xHandle, &xTaskDetails,pdTRUE, eInvalid);    

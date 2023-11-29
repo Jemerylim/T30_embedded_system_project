@@ -24,48 +24,35 @@ const char* cgi_motor_handler(int iIndex, int iNumParams, char *pcParam[], char 
     if(strcmp(pcParam[0], "motor") == 0){
         //Look at the the argument to check if LED is to be turned on (x=1) or off (x=0)
         if(strcmp(pcValue[0], "0") == 0){
-            int dataToSend = 0;
-            // Wait for the semaphore before sending
-            // if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) {                
-                // Send the temperature to the buffer for moving average
-                xMessageBufferSend( /* The message buffer to write to. */
-                    xMotorStateHandler,
-                    /* The source of the data to send. */
-                    (void *) &dataToSend,
-                    /* The length of the data to send. */
-                    sizeof( int ),
-                    /* The block time; 0 = no block */
-                    0 );
-                    printf("Data to send at 0: %d\n", dataToSend);
-                // xSemaphoreGive(xMotorStateHandlerMutex);
-            // }            
-            // Release the semaphore to turn on the RC                        
+            int dataToSend = 0;            
+            // Send the motor state to the buffer for main to read
+            xMessageBufferSend( /* The message buffer to write to. */
+                xMotorStateHandler,
+                /* The source of the data to send. */
+                (void *) &dataToSend,
+                /* The length of the data to send. */
+                sizeof( int ),
+                /* The block time; 0 = no block */
+                0 );                                                       
             stop_movement();
             printf("Stopped\n");
         }                      
         else if(strcmp(pcValue[0], "1") == 0){    
             int dataToSend = 1;
-            // if (xSemaphoreTake(xMotorStateHandlerMutex, portMAX_DELAY) == pdTRUE) { 
-                // Send the temperature to the buffer for moving average
-                xMessageBufferSend( /* The message buffer to write to. */
-                    xMotorStateHandler,
-                    /* The source of the data to send. */
-                    (void *) &dataToSend,
-                    /* The length of the data to send. */
-                    sizeof( int ),
-                    /* The block time; 0 = no block */
-                    0 );
-                    printf("Data to send at 1: %d\n", dataToSend);
-                // xSemaphoreGive(xMotorStateHandlerMutex);
-            // }                        
-            // xSemaphoreGive(motor_state_semaphore);                              
+            // Send the a 0/OFF state to the buffer for main to read
+            xMessageBufferSend( /* The message buffer to write to. */
+                xMotorStateHandler,
+                /* The source of the data to send. */
+                (void *) &dataToSend,
+                /* The length of the data to send. */
+                sizeof( int ),
+                /* The block time; 0 = no block */
+                0 );
             move_forward();
             printf("Forward\n");
         }            
-    }
-    // printf("Motor TESTING\n %d\t %d\t %s\t %s\t\n", iIndex, iNumParams, *pcParam, *pcValue);
-    xMessageBufferSend(xMotorSSIHandler, (void*) &iIndex, sizeof(int), 0);
-    // printf("Motor TESTING\n %d\t %d\t %s\t %s\t\n", iIndex, iNumParams, pcParam[0], *pcValue[0]);
+    }    
+    xMessageBufferSend(xMotorSSIHandler, (void*) &iIndex, sizeof(int), 0);    
     //Send the index page back to the user
     return "/index.shtml";
 }

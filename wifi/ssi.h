@@ -36,32 +36,21 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
     case 3: //motor
       {
         int receivedStatus;
-        size_t receivedLength;
-        receivedLength = xMessageBufferReceive(xMotorSSIHandler, &receivedStatus, sizeof(int), 0);
+        size_t receivedLength;                
+        bool motor_left_forward = gpio_get(2); // motor left forward
+        bool motor_left_backward = gpio_get(3); // motor left backward
+        bool motor_right_backward = gpio_get(4);// motor right backward 
+        bool motor_right_forward = gpio_get(5); // motot right forward
+        if((motor_left_forward == 0) && (motor_left_backward == 0) && 
+        (motor_right_backward == 0) && (motor_right_forward == 0)) {          
+          printed = snprintf(pcInsert, iInsertLen, "Stopped");
+        }
+        else if((motor_left_forward == 1) || (motor_left_backward == 1) || 
+        (motor_right_backward == 1) || (motor_right_forward == 1)){
+          printed = snprintf(pcInsert, iInsertLen, "Running");
+        }
 
-        // if(receivedLength > 0){
-          // if(receivedStatus == 1){
-            bool motor_left_forward = gpio_get(2); // motor left forward
-            bool motor_left_backward = gpio_get(3); // motor left backward
-            bool motor_right_backward = gpio_get(4);// motor right backward 
-            bool motor_right_forward = gpio_get(5); // motot right forward
-            if((motor_left_forward == 0) && (motor_left_backward == 0) && 
-            (motor_right_backward == 0) && (motor_right_forward == 0)) {          
-              printed = snprintf(pcInsert, iInsertLen, "Stopped");
-            }
-            else if((motor_left_forward == 1) || (motor_left_backward == 1) || 
-            (motor_right_backward == 1) || (motor_right_forward == 1)){
-              printed = snprintf(pcInsert, iInsertLen, "Running");
-            }
-
-            printf("GPIO 2: %d\n GPIO 3: %d\n GPIO 4: %d\n GPIO 5: %d\n", gpio_get(2), gpio_get(3),gpio_get(4),gpio_get(5));
-          // }          
-          // else{
-          //   printed = snprintf(pcInsert, iInsertLen, "Stopped");
-          // }
-        // }
-        
-                
+        printf("GPIO 2: %d\n GPIO 3: %d\n GPIO 4: %d\n GPIO 5: %d\n", gpio_get(2), gpio_get(3),gpio_get(4),gpio_get(5));                                  
       }    
       break;
       case 4: //lspeed
@@ -139,19 +128,7 @@ u16_t ssi_handler(int iIndex, char *pcInsert, int iInsertLen) {
         static char previousDecoded[11];  // Static variable to store the previous value
         char receivedChar[2];
         size_t receivedLength;
-
-        // receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*11, 0); 
-        // if(receivedLength > 0){
-        //   // printf("receivedChar: %s I AM INSIDE\n", receivedChar);
-        //   // New data received, update both the display and the previous value
-        //   printed = snprintf(pcInsert, iInsertLen, "%c", receivedChar[0]);
-        //   strncpy(previousDecoded, receivedChar, sizeof(previousDecoded) - 1);
-        //   previousDecoded[sizeof(previousDecoded) - 1] = '\0';  // Ensure null-termination
-        // } else {
-        //   //no new data, use the previous value
-        //   printed = snprintf(pcInsert, iInsertLen, "%s", previousDecoded);
-        // }
-        
+                        
         receivedLength = xMessageBufferReceive(xBarcodeCharHandler, &receivedChar, sizeof(receivedChar)*2, 0); 
         if (receivedLength > 0) {
             // New data received, update both the display and the previous value
